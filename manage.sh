@@ -33,6 +33,12 @@ case "$1" in
 		docker-compose up -d db
 		db_adduser "nextcloud"
 		docker-compose stop db
+
+		if [[ -n  "$2" ]]; then
+			sed -i "s/localhost/$2/g" docker-compose.yml
+		else
+			echo "no hostname provided (default: localhost)"
+		fi
 		;;
 	db|database)
 		case "$2" in
