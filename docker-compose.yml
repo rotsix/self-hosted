@@ -1,0 +1,91 @@
+version: '3'
+
+networks:
+  proxy-tier:
+
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    volumes:
+      - ./volumes/db:/var/lib/postgresql
+    env_file:
+      - db.env
+
+
+#########
+## GIT ##
+
+  git:
+    build: ./git
+    restart: always
+    volumes:
+      - ./volumes/git:/repos
+    environment:
+      - VIRTUAL_HOST=git.localhost
+      - KLAUS_SITE_NAME="Git Sources"
+    networks:
+      - proxy-tier
+
+
+###############
+## NEXTCLOUD ##
+
+  cloud-app:
+    image: nextcloud:fpm-alpine
+    restart: always
+    volumes:
+      - ./volumes/nextcloud:/var/www/html
+    env_file:
+      - ./cloud/env
+    depends_on:
+      - db
+
+  cloud-proxy:
+    image: nginx:alpine
+    restart: always
+    volumes:
+      - ./volumes/nextcloud:/var/www/html:ro
+      - ./cloud/nginx.conf:/etc/nginx/nginx.conf
+    environment:
+      - VIRTUAL_HOST=cloud.localhost
+    depends_on:
+      - cloud-app
+    networks:
+      - proxy-tier
+      - default
+
+
+#################
+## PROXY & SSL ##
+
+  proxy:
+    image: jwilder/nginx-proxy:alpine
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./proxy/uploadsize.conf:/etc/nginx/conf.d/uploadsize.conf
+      - ./volumes/certs:/etc/nginx/certs:ro
+      - ./volumes/vhost.d:/etc/nginx/vhost.d
+      - ./volumes/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxy-tier
+    depends_on:
+      - ssl
+
+  ssl:
+    image: paulczar/omgwtfssl
+    restart: "no"
+    volumes:
+      - ./volumes/certs:/certs
+    environment:
+      - SSL_SUBJECT=localhost
+      - CA_SUBJECT=root@localhost
+      - SSL_KEY=/certs/localhost.key
+      - SSL_CSR=/certs/localhost.csr
+      - SSL_CERT=/certs/localhost.crt
+    networks:
+      - proxy-tier
