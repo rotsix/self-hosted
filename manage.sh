@@ -8,14 +8,14 @@ db_adduser () {
 	docker exec -it self-hosted_db_1 createuser \
 		-U $POSTGRES_USER -W \
 		-P \
-		"$1"
+		"$1" || echo "can't create user '$1'"
 
 	echo "## '$POSTGRES_USER' is creating db '$1':"
 	docker exec -it self-hosted_db_1 createdb \
 		-U $POSTGRES_USER -W \
 		-O "$1" \
-		"$1"
-	}
+		"$1" || echo "can't create db '$1'"
+}
 
 usage () {
 	echo "usage: ./manage.sh <cmd>"
