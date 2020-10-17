@@ -35,7 +35,7 @@ init () {
 	docker-compose stop db
 
 	echo "### set hostname"
-	echo -n "hostname: (leave empty for 'localhost') "
+	echo -n "hostname (leave empty for 'localhost'): "
 	read -r host
 	if [[ -n  "$host" ]]; then
 		sed -i "s/localhost/$host/g" docker-compose.yml
