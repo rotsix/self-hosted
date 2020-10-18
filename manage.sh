@@ -6,13 +6,13 @@ source db.env
 db_adduser () {
 	echo "## '$POSTGRES_USER' is creating user '$1':"
 	docker exec -it self-hosted_db_1 createuser \
-		-U $POSTGRES_USER -W \
+		-U "$POSTGRES_USER" -W \
 		-P \
 		"$1" || echo "can't create user '$1'"
 
 	echo "## '$POSTGRES_USER' is creating db '$1':"
 	docker exec -it self-hosted_db_1 createdb \
-		-U $POSTGRES_USER -W \
+		-U "$POSTGRES_USER" -W \
 		-O "$1" \
 		"$1" || echo "can't create db '$1'"
 }
@@ -33,6 +33,15 @@ init () {
 	docker-compose up -d db
 	db_adduser "nextcloud"
 	docker-compose stop db
+
+	echo "### set webmaster email"
+	echo -n "email (leave empty for 'root@\$HOST'): "
+	read -r email
+	if [[ -n "$email" ]]; then
+		sed -i "s/root@localhost/$email/g" docker-compose.yml
+	else
+		echo "no email provided"
+	fi
 
 	echo "### set hostname"
 	echo -n "hostname (leave empty for 'localhost'): "
