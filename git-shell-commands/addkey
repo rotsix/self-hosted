@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# If the user is not root
+if [ "$USERNAME" != "root" ]
+then
+
+	# Dislpay a notice and stop
+	echo "Sorry, only root can use this command."
+	exit 1
+
+fi
+
+# Read in the SSH key
+echo "Input the key to be added:"
+read -r key
+
+# Generate a fingerprint
+fingerprint=$(ssh-keygen -lf <<<"$key")
+
+# Check for errors
+if [ "$(echo "$fingerprint" | grep -Ec '(R|D)SA')" -eq 0 ]
+then
+
+	# Display the fingerprint error and clean up
+	echo "Error: $fingerprint"
+	exit 1
+
+fi
+
+# Add the key to the authorised keys file and clean up
+mkdir -p .ssh &&\
+echo -n "no-agent-forwarding,no-port-forwarding,no-X11-forwarding " >> .ssh/authorized_keys &&\
+echo "$key" >> .ssh/authorized_keys
+
+# Display the fingerprint for reference
+echo "Success! Added a key with the following fingerprint:"
+echo "$fingerprint"

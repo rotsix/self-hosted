@@ -23,18 +23,16 @@ usage () {
 	echo "        add_user <user>"
 	echo "    mrproper /!\\"
 	echo
-	echo "all commands are passed directly to docker-compose"
+	echo "all other commands are passed directly to docker-compose"
 }
 
 test -z "$1" && usage && exit
 
-init () {
-	echo "### create Nextcloud db user"
-	docker-compose up -d db
+init_nextcloud () {
 	db_adduser "nextcloud"
-	docker-compose stop db
+}
 
-	echo "### set webmaster email"
+init_webmaster_email () {
 	echo -n "email (leave empty for 'root@\$HOST'): "
 	read -r email
 	if [[ -n "$email" ]]; then
@@ -42,17 +40,20 @@ init () {
 	else
 		echo "no email provided"
 	fi
+}
 
-	echo "### set hostname"
+init_hostname () {
 	echo -n "hostname (leave empty for 'localhost'): "
 	read -r host
 	if [[ -n  "$host" ]]; then
 		sed -i "s/localhost/$host/g" docker-compose.yml
+		echo "$host" | sudo tee /etc/hostname
 	else
 		echo "no hostname provided"
 	fi
+}
 
-	echo "### set firewall"
+init_firewall () {
 	sudo systemctl enable --now ufw
 	sudo ufw reset
 	sudo ufw enable
@@ -60,6 +61,40 @@ init () {
 	sudo ufw limit ssh
 	sudo ufw allow http
 	sudo ufw allow https
+}
+
+init_git () {
+	if ! grep "git-shell" /etc/shells; then
+		which git-shell | sudo tee -a /etc/shells
+	fi
+	sudo useradd --create-home --skel /dev/null \
+		--home-dir /home/git --shell /usr/bin/git-shell \
+		git
+	sudo cp -r ./git-shell-commands /home/git
+	sudo chown -R git:git /home/git
+}
+
+init () {
+	# in case of
+	docker-compose up -d db
+
+	echo "### create Nextcloud db user"
+	init_nextcloud
+
+	echo "### set webmaster email"
+	init_webmaster_email
+
+	echo "### set hostname"
+	init_hostname
+
+	echo "### set firewall"
+	init_firewall
+
+	echo "### create git user"
+	init_git
+
+	# and stop
+	docker-compose stop db
 }
 
 case "$1" in
