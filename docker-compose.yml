@@ -17,7 +17,12 @@ services:
 ## GIT ##
 
   git:
-    build: ./git
+    image: jonashaag/klaus
+    command: >-
+      uwsgi --plugin python --http11-socket 0.0.0.0:80
+      -w klaus.contrib.wsgi_autoreload --env KLAUS_REPOS=/repos
+    expose:
+      - 80
     restart: always
     volumes:
       - ./volumes/git:/repos
