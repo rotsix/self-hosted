@@ -89,8 +89,6 @@ init_git () {
 		fi
 	if [ -d /home/git ]; then
 		log "user 'git' already exist"
-		sudo -u git cp -r ./git-shell-commands /home/git
-		sudo chown -R git:git /home/git
 	else
 		if grep "^git" /etc/passwd; then
 			if ask "overwrite 'git' user?"; then
@@ -104,6 +102,9 @@ init_git () {
 			--home-dir /home/git --shell /usr/bin/git-shell \
 			git
 	fi
+
+	sudo -u git cp -r ./git-shell-commands /home/git
+	sudo chown -R git:git /home/git
 }
 
 init_web_files () {
