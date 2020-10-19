@@ -20,13 +20,11 @@ db_adduser () {
 usage () {
 	echo "usage: ./manage.sh <cmd>"
 	echo "    db <cmd>"
-	echo "        add_user <user>"
+	echo "       add_user <user>"
 	echo "    mrproper /!\\"
 	echo
 	echo "all other commands are passed directly to docker-compose"
 }
-
-test -z "$1" && usage && exit
 
 init_nextcloud () {
 	db_adduser "nextcloud"
@@ -74,6 +72,16 @@ init_git () {
 	sudo chown -R git:git /home/git
 }
 
+init_web_files () {
+	echo -n "web files location (leave empty for './web/html'): "
+	read -r location
+	if [[ -n "$location" ]]; then
+		sed -i "s:./web/index.html:$location:g" docker-compose.yml
+	else
+		echo "no location provided"
+	fi
+}
+
 init () {
 	# in case of
 	docker-compose up -d db
@@ -93,9 +101,15 @@ init () {
 	echo "### create git user"
 	init_git
 
+	echo "### set web files location"
+	init_web_files
+
 	# and stop
 	docker-compose stop db
 }
+
+# https://stackoverflow.com/a/3601734
+test -z "${1+x}" && usage && exit
 
 case "$1" in
 	init)
@@ -103,8 +117,10 @@ case "$1" in
 		;;
 
 	db|database)
-		case "$2" in
+		test -z "${2+x}" && usage && exit
+		case "${2}" in
 			add_user|adduser)
+				test -z "${3+x}" && usage && exit
 				db_adduser "$3"
 				;;
 			*)
@@ -118,6 +134,8 @@ case "$1" in
 		docker-compose down
 		sudo rm -rf ./volumes/
 		docker volume prune
+		sudo rm -r ./web/html/_site
+		sudo rm -r ./web/html/.jekyll-cache
 		;;
 
 	*)
