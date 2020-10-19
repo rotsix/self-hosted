@@ -132,10 +132,10 @@ case "$1" in
 
 	mrproper)
 		docker-compose down
-		sudo rm -rf ./volumes/
+		sudo rm -rf ./volumes
 		docker volume prune
-		sudo rm -r ./web/html/_site
-		sudo rm -r ./web/html/.jekyll-cache
+		sudo rm -rf ./web/html/_site
+		sudo rm -rf ./web/html/.jekyll-cache
 		;;
 
 	*)
