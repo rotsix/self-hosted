@@ -103,7 +103,7 @@ init_git () {
 			git
 	fi
 
-	sudo -u git cp -r ./git-shell-commands /home/git
+	sudo cp -r ./git-shell-commands /home/git
 	sudo chown -R git:git /home/git
 }
 
