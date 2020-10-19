@@ -3,18 +3,21 @@ set -euo pipefail
 
 source db.env
 
+log () { echo -e "\e[1m## $1\e[0m"; }
+log_n () { echo -en "\e[1m## $1\e[0m"; }
+
 db_adduser () {
-	echo "## '$POSTGRES_USER' is creating user '$1':"
+	log "'$POSTGRES_USER' is creating user '$1':"
 	docker exec -it self-hosted_db_1 createuser \
 		-U "$POSTGRES_USER" -W \
 		-P \
-		"$1" || echo "can't create user '$1'"
+		"$1" || log "can't create user '$1'"
 
-	echo "## '$POSTGRES_USER' is creating db '$1':"
+	log "'$POSTGRES_USER' is creating db '$1':"
 	docker exec -it self-hosted_db_1 createdb \
 		-U "$POSTGRES_USER" -W \
 		-O "$1" \
-		"$1" || echo "can't create db '$1'"
+		"$1" || log "can't create db '$1'"
 }
 
 usage () {
@@ -31,23 +34,23 @@ init_nextcloud () {
 }
 
 init_webmaster_email () {
-	echo -n "email (leave empty for 'root@\$HOST'): "
+	log_n "email (leave empty for 'root@\$HOST'): "
 	read -r email
 	if [[ -n "$email" ]]; then
 		sed -i "s/root@localhost/$email/g" docker-compose.yml
 	else
-		echo "no email provided"
+		log "no email provided"
 	fi
 }
 
 init_hostname () {
-	echo -n "hostname (leave empty for 'localhost'): "
+	log_n "hostname (leave empty for 'localhost'): "
 	read -r host
 	if [[ -n  "$host" ]]; then
 		sed -i "s/localhost/$host/g" docker-compose.yml
 		echo "$host" | sudo tee /etc/hostname
 	else
-		echo "no hostname provided"
+		log "no hostname provided"
 	fi
 }
 
@@ -61,25 +64,53 @@ init_firewall () {
 	sudo ufw allow https
 }
 
+ask () {
+	log_n "$1 [yN] "
+	while IFS= read -r ans; do
+		case $ans in
+			y|Y|yes|+)
+				return 0
+				;;
+			n|N|no|-)
+				return 1
+				;;
+			*)
+				log "not a valid choise, aborting"
+				return 1
+				;;
+		esac
+		log -n "$1 "
+	done
+}
+
 init_git () {
 	if ! grep "git-shell" /etc/shells; then
 		which git-shell | sudo tee -a /etc/shells
 	fi
-	sudo useradd --create-home --skel /dev/null \
-		--home-dir /home/git --shell /usr/bin/git-shell \
-		git \
-		|| echo "can't create user 'gir'" && return
-	sudo cp -r ./git-shell-commands /home/git
-	sudo chown -R git:git /home/git
+	if [ -e /home/git ]; then
+		log "user 'git' already exist"
+		sudo -u git cp -r ./git-shell-commands /home/git
+		sudo chown -R git:git /home/git
+	else
+		if grep "^git" /etc/passwd && ask "overwrite 'git' user?"; then
+			sudo userdel -r git
+			sudo useradd --create-home --shek /dev/null \
+				--home-dir /home/git --shell /usr/bin/git-shell \
+				git
+		else
+			log "can't create user 'git'"
+			return
+		fi
+	fi
 }
 
 init_web_files () {
-	echo -n "web files location (leave empty for './web/html'): "
+	log -n "web files location (leave empty for './web/html'): "
 	read -r location
 	if [[ -n "$location" ]]; then
 		sed -i "s:./web/index.html:$location:g" docker-compose.yml
 	else
-		echo "no location provided"
+		log "no location provided"
 	fi
 }
 
@@ -87,22 +118,22 @@ init () {
 	# in case of
 	docker-compose up -d db
 
-	echo "### create Nextcloud db user"
+	log "\e[94mcreate Nextcloud db user"
 	init_nextcloud
 
-	echo "### set webmaster email"
+	log "\e[94mset webmaster email"
 	init_webmaster_email
 
-	echo "### set hostname"
+	log "\e[94mset hostname"
 	init_hostname
 
-	echo "### set firewall"
+	log "\e[94mset firewall"
 	init_firewall
 
-	echo "### create git user"
+	log "\e[94mcreate git user"
 	init_git
 
-	echo "### set web files location"
+	log "\e[94mset web files location"
 	init_web_files
 
 	# and stop
