@@ -67,7 +67,8 @@ init_git () {
 	fi
 	sudo useradd --create-home --skel /dev/null \
 		--home-dir /home/git --shell /usr/bin/git-shell \
-		git
+		git \
+		|| echo "can't create user 'gir'" && return
 	sudo cp -r ./git-shell-commands /home/git
 	sudo chown -R git:git /home/git
 }
