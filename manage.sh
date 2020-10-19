@@ -79,33 +79,35 @@ ask () {
 				return 1
 				;;
 		esac
-		log -n "$1 "
+		log_n "$1 "
 	done
 }
 
 init_git () {
 	if ! grep "git-shell" /etc/shells; then
 		which git-shell | sudo tee -a /etc/shells
-	fi
-	if [ -e /home/git ]; then
+		fi
+	if [ -d /home/git ]; then
 		log "user 'git' already exist"
 		sudo -u git cp -r ./git-shell-commands /home/git
 		sudo chown -R git:git /home/git
 	else
-		if grep "^git" /etc/passwd && ask "overwrite 'git' user?"; then
-			sudo userdel -r git
-			sudo useradd --create-home --shek /dev/null \
-				--home-dir /home/git --shell /usr/bin/git-shell \
-				git
-		else
-			log "can't create user 'git'"
-			return
+		if grep "^git" /etc/passwd; then
+			if ask "overwrite 'git' user?"; then
+				sudo userdel -r git
+			else
+				log "can't create user 'git'"
+				return
+			fi
 		fi
+		sudo useradd --create-home --skel /dev/null \
+			--home-dir /home/git --shell /usr/bin/git-shell \
+			git
 	fi
 }
 
 init_web_files () {
-	log -n "web files location (leave empty for './web/html'): "
+	log_n "web files location (leave empty for './web/html'): "
 	read -r location
 	if [[ -n "$location" ]]; then
 		sed -i "s:./web/index.html:$location:g" docker-compose.yml
