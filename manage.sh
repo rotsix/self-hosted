@@ -1,7 +1,11 @@
 #!/bin/bash
 set -euo pipefail
+# default
+FORCE=
 
 source db.env
+source config.env
+
 
 log () { echo -e "\e[1m## $1\e[0m"; }
 log_n () { echo -en "\e[1m## $1\e[0m"; }
@@ -9,13 +13,13 @@ log_n () { echo -en "\e[1m## $1\e[0m"; }
 db_adduser () {
 	log "'$POSTGRES_USER' is creating user '$1':"
 	docker exec -it self-hosted_db_1 createuser \
-		-U "$POSTGRES_USER" -W \
+		-U "$POSTGRES_USER" \
 		-P \
 		"$1" || log "can't create user '$1'"
 
 	log "'$POSTGRES_USER' is creating db '$1':"
 	docker exec -it self-hosted_db_1 createdb \
-		-U "$POSTGRES_USER" -W \
+		-U "$POSTGRES_USER" \
 		-O "$1" \
 		"$1" || log "can't create db '$1'"
 }
@@ -34,9 +38,13 @@ init_nextcloud () {
 }
 
 init_webmaster_email () {
-	log_n "email (leave empty for 'root@\$HOST'): "
-	read -r email
-	if [[ -n "$email" ]]; then
+	if [ -n "$WEBMASTER_EMAIL" ]; then
+		log_n "email (leave empty for 'root@\$HOST'): "
+		email=$WEBMASTER_EMAIL
+	else
+		read -r email
+	fi
+	if [ -n "$email" ]; then
 		sed -i "s/root@localhost/$email/g" docker-compose.yml
 	else
 		log "no email provided"
@@ -44,9 +52,13 @@ init_webmaster_email () {
 }
 
 init_hostname () {
-	log_n "hostname (leave empty for 'localhost'): "
-	read -r host
-	if [[ -n  "$host" ]]; then
+	if [ -n "$HOSTNAME" ]; then
+		host=$HOSTNAME
+	else
+		log_n "hostname (leave empty for 'localhost'): "
+		read -r host
+	fi
+	if [ -n  "$host" ]; then
 		sed -i "s/localhost/$host/g" docker-compose.yml
 		echo "$host" | sudo tee /etc/hostname
 	else
@@ -86,12 +98,13 @@ ask () {
 init_git () {
 	if ! grep "git-shell" /etc/shells; then
 		which git-shell | sudo tee -a /etc/shells
-		fi
+	fi
 	if [ -d /home/git ]; then
 		log "user 'git' already exist"
 	else
+		log "not home found for 'git'"
 		if grep "^git" /etc/passwd; then
-			if ask "overwrite 'git' user?"; then
+			if [ -n "$FORCE" ] || ask "overwrite 'git' user?" ; then
 				sudo userdel -r git
 			else
 				log "can't create user 'git'"
@@ -108,10 +121,15 @@ init_git () {
 }
 
 init_web_files () {
-	log_n "web files location (leave empty for './web/html'): "
-	read -r location
-	if [[ -n "$location" ]]; then
-		sed -i "s:./web/index.html:$location:g" docker-compose.yml
+	if [ -n "$WEB_FILES" ]; then
+		location=$WEB_FILES
+	else
+		log_n "web files location (leave empty for './web/html'): "
+		read -r location
+	fi
+	if [ -n "$location" ]; then
+		# FIXME what if location ends with '/'?
+		sed -i "s:./web/html:$location:g" docker-compose.yml
 	else
 		log "no location provided"
 	fi
