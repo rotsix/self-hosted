@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 # default
-FORCE=
+FORCE=sure
 
 source db.env
 source config.env
@@ -39,9 +39,9 @@ init_nextcloud () {
 
 init_webmaster_email () {
 	if [ -n "$WEBMASTER_EMAIL" ]; then
-		log_n "email (leave empty for 'root@\$HOST'): "
 		email=$WEBMASTER_EMAIL
 	else
+		log_n "email (leave empty for 'root@localhost'): "
 		read -r email
 	fi
 	if [ -n "$email" ]; then
@@ -68,7 +68,11 @@ init_hostname () {
 
 init_firewall () {
 	sudo systemctl enable --now ufw
-	sudo ufw reset
+	if [ -n "$FORCE" ]; then
+		sudo ufw reset --force
+	else
+		sudo ufw reset
+	fi
 	sudo ufw enable
 	sudo ufw default deny
 	sudo ufw limit ssh
@@ -77,6 +81,10 @@ init_firewall () {
 }
 
 ask () {
+	if [ -n "$FORCE" ]; then
+		return 0
+	fi
+
 	log_n "$1 [yN] "
 	while IFS= read -r ans; do
 		case $ans in
