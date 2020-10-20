@@ -75,7 +75,7 @@ init_hostname () {
 init_firewall () {
 	sudo systemctl enable --now ufw
 	if [ -n "$FORCE" ]; then
-		sudo ufw reset --force
+		sudo ufw --force reset
 	else
 		sudo ufw reset
 	fi
