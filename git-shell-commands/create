@@ -24,8 +24,5 @@ fi
 project=$(echo "$*" | sed 's/\.git$\|$/.git/i')
 
 # Create and initialise the project
-mkdir "$project" && \
-	cd "$project" && \
-	git --bare init
-
+git init --bare "$project"
 chown -R git:git "$project"
