@@ -107,6 +107,7 @@ init_git () {
 			git
 	fi
 
+	sudo chmod 755 /home/git
 	sudo cp -r ./git-shell-commands /home/git
 	sudo chown -R git:git /home/git
 }
