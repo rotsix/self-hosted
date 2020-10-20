@@ -56,11 +56,11 @@ services:
       - 80
     restart: always
     volumes:
-      - ./volumes/git:/repos
+      - ${GIT_REPOS}:/repos
     environment:
       - VIRTUAL_HOST=git.${HOSTNAME}
 #     - LETSENCRYPT_HOST=git.${HOSTNAME}
-      - KLAUS_SITE_NAME="Git Sources"
+      - KLAUS_SITE_NAME=${GIT_SITENAME}
     networks:
       - proxy-tier
 
