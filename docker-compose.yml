@@ -21,8 +21,9 @@ services:
     restart: always
     command: jekyll build --watch --force_polling
     volumes:
-      - ./web/html:/srv/jekyll
-      - ./volumes/html:/srv/jekyll/_site
+      - ${WEB_FILES}:/srv/jekyll
+      - ./volumes/web/html:/srv/jekyll/_site
+      - ./volumes/web/jekyll-cache:/srv/jekyll/.jekyll-cache
     environment:
       - JEKYLL_ENV=production
 
@@ -35,8 +36,8 @@ services:
       - ./volumes/html:/usr/share/nginx/html:ro
       - ./web/nginx.conf:/etc/nginx/conf.d/default.conf
     environment:
-      - VIRTUAL_HOST=localhost
-#     - LETSENCRYPT_HOST=localhost
+      - VIRTUAL_HOST=${HOSTNAME}
+#     - LETSENCRYPT_HOST=${HOSTNAME}
     depends_on:
       - web-builder
     networks:
@@ -57,8 +58,8 @@ services:
     volumes:
       - ./volumes/git:/repos
     environment:
-      - VIRTUAL_HOST=git.localhost
-#     - LETSENCRYPT_HOST=git.localhost
+      - VIRTUAL_HOST=git.${HOSTNAME}
+#     - LETSENCRYPT_HOST=git.${HOSTNAME}
       - KLAUS_SITE_NAME="Git Sources"
     networks:
       - proxy-tier
@@ -84,8 +85,8 @@ services:
       - ./volumes/nextcloud:/var/www/html:ro
       - ./cloud/nginx.conf:/etc/nginx/nginx.conf
     environment:
-      - VIRTUAL_HOST=cloud.localhost
-#     - LETSENCRYPT_HOST=cloud.localhost
+      - VIRTUAL_HOST=cloud.${HOSTNAME}
+#     - LETSENCRYPT_HOST=cloud.${HOSTNAME}
     depends_on:
       - cloud-app
     networks:
@@ -119,7 +120,7 @@ services:
 #     - /var/run/docker.sock:/var/run/docker.sock:ro
 #     - ./volumes/certs:/etc/nginx/certs
 #   environment:
-#     - DEFAULT_EMAIL=root@localhost
+#     - DEFAULT_EMAIL=root@${HOSTNAME}
 
   ssl:
     image: paulczar/omgwtfssl
@@ -127,10 +128,10 @@ services:
     volumes:
       - ./volumes/certs:/certs
     environment:
-      - SSL_SUBJECT=localhost
-      - CA_SUBJECT=root@localhost
-      - SSL_KEY=/certs/localhost.key
-      - SSL_CSR=/certs/localhost.csr
-      - SSL_CERT=/certs/localhost.crt
+      - SSL_SUBJECT=${HOSTNAME}
+      - CA_SUBJECT=admin@${HOSTNAME}
+      - SSL_KEY=/certs/${HOSTNAME}.key
+      - SSL_CSR=/certs/${HOSTNAME}.csr
+      - SSL_CERT=/certs/${HOSTNAME}.crt
     networks:
       - proxy-tier
