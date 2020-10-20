@@ -12,7 +12,7 @@ cd "$(dirname "$0")" || exit
 for cmd in *
 do
 	case "$cmd" in
-	help) ;;
-	*) [ -f "$cmd" ] && [ -x "$cmd" ] && echo "$cmd" ;;
+		help) ;;
+		*) [ -f "$cmd" ] && [ -x "$cmd" ] && echo "$cmd" ;;
 	esac
 done

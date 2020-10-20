@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # If the user is not root
-if [ "$USERNAME" != "root" ]
+if [ "$USER" != "root" ]
 then
 
 	# Dislpay a notice and stop
@@ -14,8 +14,11 @@ fi
 echo "Input the key to be added:"
 read -r key
 
+keyfile=$(mktemp)
+echo "$key" > "$keyfile"
+
 # Generate a fingerprint
-fingerprint=$(ssh-keygen -lf <<<"$key")
+fingerprint=$(ssh-keygen -lf "$keyfile")
 
 # Check for errors
 if [ "$(echo "$fingerprint" | grep -Ec '(R|D)SA')" -eq 0 ]
@@ -28,9 +31,13 @@ then
 fi
 
 # Add the key to the authorised keys file and clean up
-mkdir -p .ssh &&\
-echo -n "no-agent-forwarding,no-port-forwarding,no-X11-forwarding " >> .ssh/authorized_keys &&\
-echo "$key" >> .ssh/authorized_keys
+mkdir -p ssh && \
+	echo -n "no-agent-forwarding,no-port-forwarding,no-X11-forwarding " >> ssh/authorized_keys && \
+	cat "$keyfile" >> ssh/authorized_keys && \
+	chmod 700 ssh && \
+	chmod 600 ssh/authorized_keys
+
+rm "$keyfile"
 
 # Display the fingerprint for reference
 echo "Success! Added a key with the following fingerprint:"
