@@ -31,11 +31,11 @@ then
 fi
 
 # Add the key to the authorised keys file and clean up
-mkdir -p ssh && \
-	echo -n "no-agent-forwarding,no-port-forwarding,no-X11-forwarding " >> ssh/authorized_keys && \
-	cat "$keyfile" >> ssh/authorized_keys && \
-	chmod 700 ssh && \
-	chmod 600 ssh/authorized_keys
+mkdir -p .ssh && \
+	echo -n "no-agent-forwarding,no-port-forwarding,no-X11-forwarding " >> .ssh/authorized_keys && \
+	cat "$keyfile" >> .ssh/authorized_keys && \
+	chmod 700 .ssh && \
+	chmod 600 .ssh/authorized_keys
 
 rm "$keyfile"
 
