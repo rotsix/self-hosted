@@ -119,9 +119,6 @@ init () {
 	log "\e[94msetup nextcloud"
 	init_nextcloud
 
-	log "\e[94msetup buildbot"
-	init_buildbot
-
 	log "\e[94msetup hostname"
 	init_hostname
 
