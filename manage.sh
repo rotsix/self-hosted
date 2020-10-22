@@ -12,8 +12,8 @@ log_n () { echo -en "\e[1m## $1\e[0m"; }
 
 usage () {
 	echo "usage: ./manage.sh <cmd>"
-	echo "    db <cmd>"
-	echo "       add_user <user>"
+	echo "    init"
+	echo "    test"
 	echo "    mrproper /!\\"
 	echo
 	echo "all other commands are passed directly to docker-compose"
@@ -44,13 +44,13 @@ ask () {
 
 db_adduser () {
 	log "'$POSTGRES_USER' is creating user '$1':"
-	docker exec -it self-hosted_db_1 createuser \
+	docker exec -it db createuser \
 		-U "$POSTGRES_USER" \
 		-P \
 		"$1" || log "can't create user '$1'"
 
 	log "'$POSTGRES_USER' is creating db '$1':"
-	docker exec -it self-hosted_db_1 createdb \
+	docker exec -it db createdb \
 		-U "$POSTGRES_USER" \
 		-O "$1" \
 		"$1" || log "can't create db '$1'"
@@ -116,20 +116,27 @@ init () {
 	# in case of
 	$DC up -d db
 
-	log "\e[94mcreate Nextcloud db user"
+	log "\e[94msetup nextcloud"
 	init_nextcloud
 
-	log "\e[94mset hostname"
+	log "\e[94msetup buildbot"
+	init_buildbot
+
+	log "\e[94msetup hostname"
 	init_hostname
 
-	log "\e[94mset firewall"
+	log "\e[94msetup firewall"
 	init_firewall
 
-	log "\e[94mcreate git user"
+	log "\e[94msetup git"
 	init_git
 
 	# and stop
 	$DC stop db
+}
+
+run_tests () {
+	echo "all went fine"
 }
 
 # https://stackoverflow.com/a/3601734
@@ -140,18 +147,8 @@ case "$1" in
 		init
 		;;
 
-	db|database)
-		test -z "${2+x}" && usage && exit
-		case "${2}" in
-			add_user|adduser)
-				test -z "${3+x}" && usage && exit
-				db_adduser "$3"
-				;;
-			*)
-				echo "command not found"
-				exit 1
-				;;
-		esac
+	test)
+		run_tests
 		;;
 
 	mrproper)
