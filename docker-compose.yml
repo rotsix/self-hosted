@@ -36,7 +36,7 @@ services:
     expose:
       - 80
     volumes:
-      - ./volumes/html:/usr/share/nginx/html:ro
+      - ./volumes/web/html:/usr/share/nginx/html:ro
       - ./web/nginx.conf:/etc/nginx/conf.d/default.conf
     environment:
       - VIRTUAL_HOST=${HOSTNAME}
@@ -115,9 +115,9 @@ services:
       - 443:443
     volumes:
       - ./proxy/uploadsize.conf:/etc/nginx/conf.d/uploadsize.conf
-      - ./volumes/certs:/etc/nginx/certs:ro
-      - ./volumes/vhost.d:/etc/nginx/vhost.d
-      - ./volumes/html:/usr/share/nginx/html
+      - ./volumes/proxy/certs:/etc/nginx/certs:ro
+      - ./volumes/proxy/vhost.d:/etc/nginx/vhost.d
+      - ./volumes/proxy/html:/usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
     depends_on:
       - ssl
@@ -131,17 +131,17 @@ services:
 #   volumes_from:
 #     - proxy
 #   volumes:
+#     - ./volumes/proxy/certs:/etc/nginx/certs
 #     - /var/run/docker.sock:/var/run/docker.sock:ro
-#     - ./volumes/certs:/etc/nginx/certs
 #   environment:
-#     - DEFAULT_EMAIL=root@${HOSTNAME}
+#     - DEFAULT_EMAIL=admin@${HOSTNAME}
 
   ssl:
     image: paulczar/omgwtfssl
     container_name: ssl
     restart: "no"
     volumes:
-      - ./volumes/certs:/certs
+      - ./volumes/proxy/certs:/certs
     environment:
       - SSL_SUBJECT=${HOSTNAME}
       - CA_SUBJECT=admin@${HOSTNAME}
