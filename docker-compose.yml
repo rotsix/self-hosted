@@ -133,18 +133,3 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - DEFAULT_EMAIL=admin@${HOSTNAME}
-
-# ssl:
-#   image: paulczar/omgwtfssl
-#   container_name: ssl
-#   restart: "no"
-#   volumes:
-#     - ./volumes/proxy/certs:/certs
-#   environment:
-#     - SSL_SUBJECT=${HOSTNAME}
-#     - CA_SUBJECT=admin@${HOSTNAME}
-#     - SSL_KEY=/certs/${HOSTNAME}.key
-#     - SSL_CSR=/certs/${HOSTNAME}.csr
-#     - SSL_CERT=/certs/${HOSTNAME}.crt
-#   networks:
-#     - proxy-tier
