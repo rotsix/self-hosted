@@ -119,8 +119,6 @@ services:
       - ./volumes/proxy/vhost.d:/etc/nginx/vhost.d
       - ./volumes/proxy/html:/usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
-    depends_on:
-      - ssl
     networks:
       - proxy-tier
 
