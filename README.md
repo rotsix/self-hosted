@@ -11,7 +11,7 @@ Needed packages:
 The architecture consists yet of the following components:
 
 - a Nginx+TLS reverse-proxy, it handles subdomains and routing to dedicated container
-- a personal homepage, managed by a Jekyll container (`domain.tld`>)
+- a personal homepage, managed by a Jekyll container (`domain.tld`)
 - a NextCloud instance (`cloud.domain.tld`)
 - a git viewer, Klaus (`git.domain.tld`)
 
