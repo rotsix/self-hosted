@@ -40,7 +40,7 @@ services:
       - ./volumes/web/html:/usr/share/nginx/html:ro
     environment:
       - VIRTUAL_HOST=${HOSTNAME}
-#     - LETSENCRYPT_HOST=${HOSTNAME}
+      - LETSENCRYPT_HOST=${HOSTNAME}
     depends_on:
       - web-builder
       - proxy
@@ -64,7 +64,7 @@ services:
       - ${GIT_REPOS}:/repos
     environment:
       - VIRTUAL_HOST=git.${HOSTNAME}
-#     - LETSENCRYPT_HOST=git.${HOSTNAME}
+      - LETSENCRYPT_HOST=git.${HOSTNAME}
       - KLAUS_SITE_NAME=${GIT_SITENAME}
     depends_on:
       - proxy
@@ -95,7 +95,7 @@ services:
       - ./volumes/nextcloud:/var/www/html:ro
     environment:
       - VIRTUAL_HOST=cloud.${HOSTNAME}
-#     - LETSENCRYPT_HOST=cloud.${HOSTNAME}
+      - LETSENCRYPT_HOST=cloud.${HOSTNAME}
     depends_on:
       - cloud-app
       - proxy
@@ -124,29 +124,29 @@ services:
     networks:
       - proxy-tier
 
-# ssl:
-#   image: jrcs/letsencrypt-nginx-proxy-companion
-#   container_name: ssl
-#   restart: always
-#   volumes_from:
-#     - proxy
-#   volumes:
-#     - ./volumes/proxy/certs:/etc/nginx/certs
-#     - /var/run/docker.sock:/var/run/docker.sock:ro
-#   environment:
-#     - DEFAULT_EMAIL=admin@${HOSTNAME}
-
   ssl:
-    image: paulczar/omgwtfssl
+    image: jrcs/letsencrypt-nginx-proxy-companion
     container_name: ssl
-    restart: "no"
+    restart: always
+    volumes_from:
+      - proxy
     volumes:
-      - ./volumes/proxy/certs:/certs
+      - ./volumes/proxy/certs:/etc/nginx/certs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      - SSL_SUBJECT=${HOSTNAME}
-      - CA_SUBJECT=admin@${HOSTNAME}
-      - SSL_KEY=/certs/${HOSTNAME}.key
-      - SSL_CSR=/certs/${HOSTNAME}.csr
-      - SSL_CERT=/certs/${HOSTNAME}.crt
-    networks:
-      - proxy-tier
+      - DEFAULT_EMAIL=admin@${HOSTNAME}
+
+# ssl:
+#   image: paulczar/omgwtfssl
+#   container_name: ssl
+#   restart: "no"
+#   volumes:
+#     - ./volumes/proxy/certs:/certs
+#   environment:
+#     - SSL_SUBJECT=${HOSTNAME}
+#     - CA_SUBJECT=admin@${HOSTNAME}
+#     - SSL_KEY=/certs/${HOSTNAME}.key
+#     - SSL_CSR=/certs/${HOSTNAME}.csr
+#     - SSL_CERT=/certs/${HOSTNAME}.crt
+#   networks:
+#     - proxy-tier
