@@ -56,7 +56,7 @@ services:
     container_name: git
     command: >-
       uwsgi --plugin python --http11-socket 0.0.0.0:80
-      -w klaus.contrib.wsgi_autoreload --env KLAUS_REPOS=/repos
+      -w klaus.contrib.wsgi_autoreload --env KLAUS_REPOS=/repos --env KLAUS_USE_SMARTHTTP=1
     expose:
       - 80
     restart: always
