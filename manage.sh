@@ -66,7 +66,9 @@ init_hostname () {
 		read -r HOSTNAME
 	fi
 	if [ -n  "$HOSTNAME" ]; then
-		echo "$HOSTNAME" | sudo tee /etc/hostname
+		if [ "$HOSTNAME" != "localhost" ]; then
+			echo "$HOSTNAME" | sudo tee /etc/hostname
+		fi
 	else
 		log "no hostname provided"
 	fi
