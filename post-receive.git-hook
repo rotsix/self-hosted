@@ -1,0 +1,23 @@
+#!/bin/bash
+
+PROD_DIR=$(pwd)
+BRANCH=master
+
+GIT="git --work-tree=$PROD_DIR --git-dir=$PROD_DIR/.git"
+
+BOLD="\e[1m"
+BLUE="\e[34m"
+RESET="\e[0m"
+PREFIX="$BOLD$BLUE::$RESET$BOLD"
+log () { echo -e "$PREFIX $1$RESET"; }
+
+while read -r _ _ ref; do
+	if [ "$ref" = "refs/heads/$BRANCH" ]; then
+		log "Stopping services..."
+		"$PROD_DIR/manage.sh down"
+		log "Pulling new sources..."
+		$GIT pull || return 1
+		log "Starting services..."
+		"$PROD_DIR/manage.sh up -d"
+	fi
+done
