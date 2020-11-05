@@ -67,6 +67,7 @@ init_hostname () {
 	fi
 	if [ -n  "$HOSTNAME" ]; then
 		if [ "$HOSTNAME" != "localhost" ]; then
+			sudo hostname "$HOSTNAME"
 			echo "$HOSTNAME" | sudo tee /etc/hostname
 		fi
 	else

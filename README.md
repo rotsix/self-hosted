@@ -18,17 +18,17 @@ The architecture consists yet of the following components:
 To get this project up and running, get the sources:
 
 ```sh
-git clone https://github.com/rotsix/self-hosted
+git clone https://git.franzi.fr/self-hosted
 ```
 
 ## Initialization
 
 First, some settings have to be setup before launching the services.
-By example, NextCloud needs a dedicated database.
+By example, Nextcloud relies on a database.
 
-A all-in-one script is available (`./manage.sh`).
+An all-in-one script is available (`./manage.sh`).
 To initialize the architecture, first edit the `env` files.
-Each folder may contain one, so take a close look.
+Each folder may contain one, so look closely.
 
 Then, run the script:
 
@@ -36,7 +36,7 @@ Then, run the script:
 ./manage.sh init
 ```
 
-This command can be launched before each run, it **won't** erase any existing data.
+This command can be run before each run, it **won't** erase any existing data.
 
 > Note: after the very first init, a reboot is required to update the hostname (`/etc/hostname`).
 
@@ -50,16 +50,15 @@ Once initialized, simply launch the services:
 ```sh
 ./manage.sh up
 # or in background
-./manage.sh -d up
+./manage.sh up -d
 ```
 
-All commands passed to `manage.sh` will go directly to `docker`, it just add the `-e config.env` flag.
+All commands to `manage.sh` will go directly to `docker-compose`, it just pass the `-e config.env` flag.
 
 ## Update
 
 ```sh
 ./manage.sh down
 git pull
-./manage.sh init
-./manage.sh -d up
+./manage.sh up -d
 ```

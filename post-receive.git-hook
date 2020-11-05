@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 PROD_DIR=$(pwd)
 BRANCH=master
@@ -20,4 +21,7 @@ while read -r _ _ ref; do
 		log "Starting services..."
 		"$PROD_DIR/manage.sh up -d"
 	fi
+
+	# and push to github
+	$GIT push --quiet github
 done
