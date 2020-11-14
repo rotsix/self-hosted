@@ -6,9 +6,12 @@ source config.env
 
 DC="docker-compose --env-file ./config.env"
 
-
-log () { echo -e "\e[1m## $1\e[0m"; }
-log_n () { echo -en "\e[1m## $1\e[0m"; }
+bold="\e[1m"
+blue="\e[34m"
+default="\e[39m"
+reset="\e[0m"
+log () { echo -e "$bold$blue::$default $1$reset"; }
+log_n () { echo -en "$bold$blue::$default $1$reset"; }
 
 usage () {
 	echo "usage: ./manage.sh <cmd>"
@@ -26,11 +29,11 @@ ask () {
 
 	log_n "$1 [yN] "
 	while IFS= read -r ans; do
-		case $ans in
-			y|Y|yes|+)
+		case ${ans,,} in
+			y|yes|+)
 				return 0
 				;;
-			n|N|no|-)
+			n|no|-)
 				return 1
 				;;
 			*)
@@ -97,7 +100,7 @@ init_git () {
 		log "user 'git' already exist"
 	else
 		log "not home found for 'git'"
-		if grep "^git" /etc/passwd; then
+		if grep "^git:" /etc/passwd; then
 			if ask "overwrite 'git' user?" ; then
 				sudo userdel -r git
 			else
@@ -110,25 +113,30 @@ init_git () {
 			git
 	fi
 
-	sudo chmod 755 /home/git
-	sudo cp -r ./git-shell-commands /home/git
-	sudo chown -R git:git /home/git
+	cat << EOF | sudo bash
+	rm -rf /home/git/git-shell-commands || true
+	cp -rf ./git-shell-commands /home/git
+	chown -R git:git /home/git
+EOF
+	log "/!\\ add SSH key to '/home/git/.ssh/authorized_keys'"
 }
 
 init () {
+	prefix="\b$blue··$default "
+
 	# in case of
 	$DC up -d db
 
-	log "\e[94msetup nextcloud"
+	log "${prefix}init nextcloud"
 	init_nextcloud
 
-	log "\e[94msetup hostname"
+	log "${prefix}init hostname"
 	init_hostname
 
-	log "\e[94msetup firewall"
+	log "${prefix}init firewall"
 	init_firewall
 
-	log "\e[94msetup git"
+	log "${prefix}init git"
 	init_git
 
 	# and stop
