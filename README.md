@@ -28,7 +28,7 @@ By example, Nextcloud relies on a database.
 
 An all-in-one script is available (`./manage.sh`).
 To initialize the architecture, first edit the `env` files.
-Each folder may contain one, so look closely.
+Each folder may contain one, so look closely (you also can use `find . -name "*.env"`).
 
 Then, run the script:
 
