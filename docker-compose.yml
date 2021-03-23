@@ -82,7 +82,7 @@ services:
     volumes:
       - ./volumes/nextcloud:/var/www/html
     env_file:
-      - ./cloud/env
+      - ./cloud.env
     depends_on:
       - db
 
