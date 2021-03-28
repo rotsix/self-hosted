@@ -38,8 +38,6 @@ Then, run the script:
 
 This command can be run before each run, it **won't** erase any existing data.
 
-> Note: after the very first init, a reboot is required to update the hostname (`/etc/hostname`).
-
 By default, all the docker volumes are located in `./volumes`.
 You may want to backup this directory.
 
