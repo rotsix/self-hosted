@@ -1,0 +1,328 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ./config.yml
+
+  tasks:
+
+    #############################
+    ### System configurations ###
+    #############################
+
+    ######################
+    ### System and updates
+
+    - name: Update system
+      community.general.pacman:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install dependencies
+      community.general.pacman:
+        name:
+          - docker
+          - python
+          - python-docker
+          - git
+          - termite-terminfo
+          - ufw
+          - sudo
+        state: present
+
+    - name: Start Docker daemon
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ hostname }}"
+
+
+    #########
+    ### Users
+
+    - name: Create '{{ main_user }}' user
+      ansible.builtin.user:
+        name: "{{ main_user }}"
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        groups: wheel,users
+
+    - name: Create 'git' user
+      ansible.builtin.user:
+        name: git
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        shell: /usr/bin/git-shell
+        password_lock: yes
+        create_home: true
+        home: /home/git
+        skeleton: "false"
+
+    - name: Copy git shell commands
+      ansible.builtin.copy:
+        src: ./git-shell-commands
+        dest: /home/git
+        owner: git
+        group: git
+        mode: 0755
+
+
+    ############
+    ### Firewall
+
+    - name: "Configure firewall: default deny"
+      community.general.ufw:
+        state: enabled
+        policy: deny
+
+    - name: "Configure firewall: restrict ssh"
+      community.general.ufw:
+        rule: limit
+        port: ssh
+        proto: tcp
+
+    - name: "Configure firewall: allow http"
+      community.general.ufw:
+        rule: allow
+        port: http
+
+    - name: "Configure firewall: allow https"
+      community.general.ufw:
+        rule: allow
+        port: https
+
+
+    #######################
+    ### Docker networks ###
+    #######################
+
+    - name: "Create Docker network: git"
+      community.docker.docker_network:
+        name: git
+
+    - name: "Create Docker network: web"
+      community.docker.docker_network:
+        name: web
+
+    - name: "Create Docker network: cloud (cloud-proxy+reverse-proxy)"
+      community.docker.docker_network:
+        name: cloud
+
+    - name: "Create Docker network: cloud (app+db+proxy)"
+      community.docker.docker_network:
+        name: cloud-app
+
+    - name: "Create Docker network: reverseproxy"
+      community.docker.docker_network:
+        name: reverseproxy
+
+
+    #######################
+    ### Docker services ###
+    #######################
+
+    #######
+    ### Web
+
+    - name: Start Web builder
+      community.docker.docker_container:
+        state: started
+        name: web-builder
+        image: jekyll/jekyll
+        restart_policy: unless-stopped
+        command: jekyll build --watch --force_polling
+        env:
+          JEKYLL_ENV: production
+        volumes:
+          - "{{ web_files }}:/srv/jekyll"
+          - /mnt/web/html:/srv/jekyll/_site
+          - /mnt/web/jekyll-cache:/srv/jekyll/.jekyll-cache
+
+    - name: Start Web proxy
+      community.docker.docker_container:
+        state: started
+        name: web-proxy
+        image: nginx:alpine
+        restart_policy: unless-stopped
+        exposed_ports:
+          - "80"
+        volumes:
+          - /vagrant/web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+          - /mnt/web/html:/usr/share/nginx/html:ro
+        networks:
+          - name: web
+
+
+    #######
+    ### Git
+
+    - name: Start Git WebUI
+      community.docker.docker_container:
+        state: started
+        name: git
+        image: jonashaag/klaus
+        restart_policy: unless-stopped
+        command: >-
+          uwsgi --plugin python --http11-socket 0.0.0.0:80
+          -w klaus.contrib.wsgi_autoreload
+          --env KLAUS_REPOS=/repos --env KLAUS_USE_SMARTHTTP=1
+        exposed_ports:
+          - "80"
+        env:
+          KLAUS_SITE_NAME: "{{ git_sitename }}"
+        volumes:
+          - "{{ git_repos }}:/repos:ro"
+        networks:
+          - name: git
+
+
+    #########
+    ### Cloud
+
+    - name: Start Cloud database
+      community.docker.docker_container:
+        state: started
+        name: cloud-db
+        image: postgres:alpine
+        restart_policy: unless-stopped
+        env:
+          POSTGRES_USER: nextcloud
+          POSTGRES_DATABASE: nextcloud
+          POSTGRES_PASSWORD: "{{ cloud_db_password | quote }}"
+          POSTGRES_ROOT_PASSWORD: "{{ cloud_db_root_password | quote }}"
+        volumes:
+          - /mnt/cloud-db:/var/lib/postgresql/data
+        networks:
+          - name: cloud-app
+
+    - name: Wait for the database to be ready
+      command: >
+        docker exec cloud-db
+        pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
+      register: result
+      until: not result.rc
+      retries: 30
+      delay: 1
+
+    - name: Start Cloud app
+      community.docker.docker_container:
+        state: started
+        name: cloud-app
+        image: nextcloud:fpm-alpine
+        restart_policy: unless-stopped
+        env:
+          POSTGRES_HOST: cloud-db
+          POSTGRES_USER: nextcloud
+          POSTGRES_DATABASE: nextcloud
+          POSTGRES_PASSWORD: "{{ cloud_db_password | quote }}"
+        volumes:
+          - /mnt/cloud:/var/www/html
+        networks:
+          - name: cloud-app
+
+    - name: Start Cloud proxy
+      community.docker.docker_container:
+        state: started
+        name: cloud-proxy
+        image: nginx:alpine
+        restart_policy: unless-stopped
+        exposed_ports:
+          - "80"
+        volumes:
+          - /vagrant/cloud/nginx.conf:/etc/nginx/nginx.conf:ro
+          - /mnt/cloud:/var/www/html:ro
+        networks:
+          - name: cloud-app
+          - name: cloud
+
+
+    ###############
+    ### Proxy & SSL
+
+    - name: Start reverse-proxy database
+      community.docker.docker_container:
+        state: started
+        name: reverseproxy-db
+        image: mariadb
+        restart_policy: unless-stopped
+        env:
+          MYSQL_DATABASE: npm
+          MYSQL_USER: npm
+          MYSQL_PASSWORD: "{{ reverseproxy_db_password | quote }}"
+          MYSQL_ROOT_PASSWORD: "{{ reverseproxy_db_root_password | quote }}"
+        volumes:
+          - /mnt/reverseproxy-db:/var/lib/mysql
+        networks:
+          - name: reverseproxy
+
+    - name: Wait for the database to be ready
+      command: >
+        docker exec reverseproxy-db
+        mysqladmin ping -unpm -p{{ reverseproxy_db_root_password | quote }}
+      register: result
+      until: not result.rc
+      retries: 30
+      delay: 1
+
+    - name: Start reverse-proxy
+      community.docker.docker_container:
+        state: started
+        name: reverseproxy
+        image: jc21/nginx-proxy-manager
+        restart_policy: unless-stopped
+        env:
+          DB_MYSQL_HOST: reverseproxy-db
+          DB_MYSQL_PORT: "3306"
+          DB_MYSQL_NAME: npm
+          DB_MYSQL_USER: npm
+          DB_MYSQL_PASSWORD: "{{ reverseproxy_db_password }}"
+        volumes:
+          - /mnt/reverseproxy/data:/data
+          - /mnt/reverseproxy/letsencrypt:/letsencrypt
+        ports:
+          - 80:80
+          - 81:81
+          - 443:443
+        networks:
+          - name: reverseproxy
+          - name: git
+          - name: web
+          - name: cloud
+
+
+  #- name: Start proxy
+    #community.docker.docker_container:
+      #state: started
+      #name: proxy
+      #image: nginxproxy/nginx-proxy:alpine
+      #restart_policy: unless-stopped
+      #env:
+        #ENABLE_IPV6: "true"
+      #volumes:
+        #- /vagrant/proxy/uploadsize.conf:/etc/nginx/conf.d/uploadsize.conf:ro
+        #- /mnt/proxy/certs:/etc/nginx/certs:ro
+        #- /mnt/proxy/vhost.d:/etc/nginx/vhost.d
+        #- /mnt/proxy/html:/usr/share/nginx/html
+        #- /var/run/docker.sock:/tmp/docker.sock:ro
+      #ports:
+        #- 80:80
+        #- 443:443
+      #networks:
+        #- name: git
+        #- name: web
+
+  #- name: Start SSL
+     #community.docker.docker_container:
+     #state: started
+     #name: ssl
+     #image: jrcs/letsencrypt-nginx-proxy-companion
+     #restart_policy: unless-stopped
+     #env:
+       #DEFAULT_EMAIL: "{{ webmaster_email }}"
+     #volumes_from: proxy
+     #volumes:
+       #- /mnt/proxy/certs:/etc/nginx/certs
+       #- /var/run/docker.sock:/var/run/docker.sock:ro
