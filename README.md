@@ -1,12 +1,17 @@
 # Self-hosted
 
-## Installation
+## Requirements
 
 Needed packages:
 
-- `docker`/`docker-compose`: obvious
-- `ufw`: firewall
-- `git`: obvious again
+On host:
+
+- `ansible`
+
+On target:
+
+- `python3` (ansible requirement)
+- a sudo-able user
 
 The architecture consists yet of the following components:
 
@@ -15,48 +20,42 @@ The architecture consists yet of the following components:
 - a NextCloud instance (`cloud.domain.tld`)
 - a git viewer, Klaus (`git.domain.tld`)
 
+## Configuration
+
+All the congurations are contained in `config.yml`.
+Edit the file, then run the project.
+
+The git repositories are at `/home/git` by default, this allowing to clone the repositories this way:
+
+```
+git clone git@domain.tld:repo.git
+```
+
+Or, using Klaus URL:
+
+```
+git clone https://git.domain.tld/repo.git
+```
+
+The web files are at `/tmp/www` by default.
+In my case, they are located at `/home/git/.website-clone` as the sources are in another repository.
+Using the default value without an `index.html` in the default directory may result in an error (likely 404).
+
+## Running
+
 To get this project up and running, get the sources:
 
 ```sh
 git clone https://git.franzi.fr/self-hosted
 ```
 
-## Initialization
-
-First, some settings have to be setup before launching the services.
-By example, Nextcloud relies on a database.
-
-An all-in-one script is available (`./manage.sh`).
-To initialize the architecture, first edit the `env` files.
-Each folder may contain one, so look closely (you also can use `find . -name "*.env"`).
-
-Then, run the script:
+This project is managed by ansible.
+To deploy the architecture to a server, run the following command:
 
 ```sh
-./manage.sh init
+# trailing comma is mandatory   v
+$ ansible-playbook -i domain.tld, -u user playbook.yml
 ```
 
-This command can be run before each run, it **won't** erase any existing data.
-
-By default, all the docker volumes are located in `./volumes`.
+By default, all the docker volumes are located in `/mnt`.
 You may want to backup this directory.
-
-## Running
-
-Once initialized, simply launch the services:
-
-```sh
-./manage.sh up
-# or in background
-./manage.sh up -d
-```
-
-All commands to `manage.sh` will go directly to `docker-compose`, it just pass the `-e config.env` flag.
-
-## Update
-
-```sh
-./manage.sh down
-git pull
-./manage.sh up -d
-```
