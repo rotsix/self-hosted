@@ -294,7 +294,7 @@
           - /mnt/reverseproxy/letsencrypt:/etc/letsencrypt
         ports:
           - 80:80
-          - 81:81
+          - 127.0.0.1:81:81
           - 443:443
         networks:
           - name: reverseproxy
