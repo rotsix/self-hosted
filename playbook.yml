@@ -64,10 +64,12 @@
         generate_ssh_key: yes
         ssh_key_bits: 2048
         shell: /usr/bin/git-shell
-        password_lock: yes
         create_home: true
         home: /home/git
         skeleton: "false"
+
+    - name: Disable 'git' password
+      ansible.builtin.shell: passwd -d git
 
     - name: Copy git shell commands
       ansible.builtin.copy:
