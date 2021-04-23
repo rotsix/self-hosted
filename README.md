@@ -22,8 +22,8 @@ The architecture consists yet of the following components:
 
 ## Configuration
 
-All the congurations are contained in `config.yml`.
-Edit the file, then run the project.
+A sample configuration is available at `config-sample.yml`.
+Copy it and rename it to `config.yml` and adapt it to your setup.
 
 The git repositories are at `/home/git` by default, this allowing to clone the repositories this way:
 

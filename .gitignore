@@ -3,3 +3,4 @@ web/html/_site
 web/html/.jekyll-cache
 .vagrant
 WIP/
+config.yml
