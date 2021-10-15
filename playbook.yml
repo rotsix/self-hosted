@@ -2,6 +2,9 @@
   become: yes
   vars_files:
     - ./config.yml
+  vars:
+    - healthcheck_postgres: pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
+    - healthcheck_mysql: mysqladmin ping -unpm -p{{ reverseproxy_db_password | quote }}
 
   tasks:
 
@@ -32,7 +35,6 @@
           - python
           - python-docker
           - git
-          - termite-terminfo
           - ufw
           - sudo
         state: present
@@ -205,13 +207,13 @@
           POSTGRES_ROOT_PASSWORD: "{{ cloud_db_root_password | quote }}"
         volumes:
           - /mnt/cloud-db:/var/lib/postgresql/data
+        healthcheck:
+          test: "{{ healthcheck_postgres }}"
         networks:
           - name: cloud-app
 
     - name: Wait for the database to be ready
-      command: >
-        docker exec cloud-db
-        pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
+      command: docker exec cloud-db {{ healthcheck_postgres }}
       register: result
       until: not result.rc
       retries: 30
@@ -265,13 +267,13 @@
           MYSQL_ROOT_PASSWORD: "{{ reverseproxy_db_root_password | quote }}"
         volumes:
           - /mnt/reverseproxy-db:/var/lib/mysql
+        healthcheck:
+          test: "{{ healthcheck_mysql }}"
         networks:
           - name: reverseproxy
 
     - name: Wait for the database to be ready
-      command: >
-        docker exec reverseproxy-db
-        mysqladmin ping -unpm -p{{ reverseproxy_db_password | quote }}
+      command: docker exec reverseproxy-db {{ healthcheck_mysql }}
       register: result
       until: not result.rc
       retries: 30
@@ -301,6 +303,9 @@
           - name: git
           - name: web
           - name: cloud
+
+
+
 
 
   #- name: Start proxy
