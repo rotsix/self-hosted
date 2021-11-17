@@ -12,8 +12,8 @@
     ### System configurations ###
     #############################
 
-    ######################
-    ### System and updates
+    ################
+    ### Config files
 
     - name: Copy config files
       ansible.builtin.copy:
@@ -23,31 +23,6 @@
         - ../conf/cloud
         - ../conf/web
 
-    - name: Update system
-      community.general.pacman:
-        update_cache: yes
-        upgrade: yes
-
-    - name: Install dependencies
-      community.general.pacman:
-        name:
-          - docker
-          - python
-          - python-docker
-          - git
-          - ufw
-          - sudo
-        state: present
-
-    - name: Start Docker daemon
-      ansible.builtin.systemd:
-        name: docker
-        state: started
-        enabled: yes
-
-    - name: Set hostname
-      ansible.builtin.hostname:
-        name: "{{ hostname }}"
 
     #########
     ### Users

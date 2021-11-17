@@ -1,0 +1,46 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ../conf/config.yml
+
+  tasks:
+    - name: Update system
+      community.general.pacman:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install dependencies
+      community.general.pacman:
+        name:
+          - docker
+          - git
+          - python
+          - python-docker
+          - sudo
+          - ufw
+        state: present
+
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ hostname }}"
+
+    - name: Enable Docker service
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Enable UFW service
+      ansible.builtin.systemd:
+        name: ufw
+        state: started
+        enabled: yes
+
+    - name: Update current Docker images
+      ansible.builtin.shell: |
+        docker rm -f $(docker ps -a -q)
+        docker images | grep -v '^REPO' | sed 's/ \+/:/g' | cut -d: -f1,2 | xargs -L1 docker pull
+
+    - name: Reboot
+      ansible.builtin.reboot:
+        reboot:
