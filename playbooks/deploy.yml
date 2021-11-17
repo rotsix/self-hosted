@@ -1,7 +1,7 @@
 - hosts: all
   become: yes
   vars_files:
-    - ./config.yml
+    - ../conf/config.yml
   vars:
     - healthcheck_postgres: pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
     - healthcheck_mysql: mysqladmin ping -unpm -p{{ reverseproxy_db_password | quote }}
@@ -20,8 +20,8 @@
         src: "{{ item }}"
         dest: /mnt/conf
       loop:
-        - cloud
-        - web
+        - ../conf/cloud
+        - ../conf/web
 
     - name: Update system
       community.general.pacman:
@@ -49,7 +49,6 @@
       ansible.builtin.hostname:
         name: "{{ hostname }}"
 
-
     #########
     ### Users
 
@@ -75,12 +74,11 @@
 
     - name: Copy git shell commands
       ansible.builtin.copy:
-        src: ./git-shell-commands
+        src: ../conf/git-shell-commands
         dest: /home/git
         owner: git
         group: git
         mode: preserve
-
 
     ############
     ### Firewall
@@ -106,7 +104,6 @@
         rule: allow
         port: https
 
-
     #######################
     ### Docker networks ###
     #######################
@@ -130,7 +127,6 @@
     - name: "Create Docker network: reverseproxy"
       community.docker.docker_network:
         name: reverseproxy
-
 
     #######################
     ### Docker services ###
@@ -167,7 +163,6 @@
         networks:
           - name: web
 
-
     #######
     ### Git
 
@@ -189,7 +184,6 @@
           - "{{ git_repos }}:/repos:ro"
         networks:
           - name: git
-
 
     #########
     ### Cloud
@@ -250,7 +244,6 @@
           - name: cloud-app
           - name: cloud
 
-
     ###############
     ### Proxy & SSL
 
@@ -303,10 +296,6 @@
           - name: git
           - name: web
           - name: cloud
-
-
-
-
 
   #- name: Start proxy
     #community.docker.docker_container:
