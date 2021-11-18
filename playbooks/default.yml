@@ -24,11 +24,19 @@
       ansible.builtin.hostname:
         name: "{{ hostname }}"
 
+    - name: Reboot
+      ansible.builtin.reboot:
+
     - name: Enable Docker service
       ansible.builtin.systemd:
         name: docker
         state: started
         enabled: yes
+
+    - name: Update current Docker images
+      ansible.builtin.shell: |
+        docker rm -f $(docker ps -a -q) || true
+        docker images | grep -v '^REPO' | sed 's/ \+/:/g' | cut -d: -f1,2 | xargs -L1 -r docker pull
 
     - name: Enable UFW service
       ansible.builtin.systemd:
@@ -36,11 +44,13 @@
         state: started
         enabled: yes
 
-    - name: Update current Docker images
-      ansible.builtin.shell: |
-        docker rm -f $(docker ps -a -q)
-        docker images | grep -v '^REPO' | sed 's/ \+/:/g' | cut -d: -f1,2 | xargs -L1 docker pull
+    - name: "Configure firewall: default deny"
+      community.general.ufw:
+        state: enabled
+        policy: deny
 
-    - name: Reboot
-      ansible.builtin.reboot:
-        reboot:
+    - name: "Configure firewall: restrict ssh"
+      community.general.ufw:
+        rule: limit
+        port: ssh
+        proto: tcp

@@ -8,10 +8,6 @@
 
   tasks:
 
-    #############################
-    ### System configurations ###
-    #############################
-
     ################
     ### Config files
 
@@ -20,8 +16,8 @@
         src: "{{ item }}"
         dest: /mnt/conf
       loop:
-        - ../conf/cloud
-        - ../conf/web
+        - ../conf/cloud/cloud
+        - ../conf/cloud/web
 
 
     #########
@@ -49,7 +45,7 @@
 
     - name: Copy git shell commands
       ansible.builtin.copy:
-        src: ../conf/git-shell-commands
+        src: ../conf/cloud/git-shell-commands
         dest: /home/git
         owner: git
         group: git
@@ -57,17 +53,6 @@
 
     ############
     ### Firewall
-
-    - name: "Configure firewall: default deny"
-      community.general.ufw:
-        state: enabled
-        policy: deny
-
-    - name: "Configure firewall: restrict ssh"
-      community.general.ufw:
-        rule: limit
-        port: ssh
-        proto: tcp
 
     - name: "Configure firewall: allow http"
       community.general.ufw:
@@ -79,9 +64,8 @@
         rule: allow
         port: https
 
-    #######################
-    ### Docker networks ###
-    #######################
+    ###################
+    ### Docker networks
 
     - name: "Create Docker network: git"
       community.docker.docker_network:

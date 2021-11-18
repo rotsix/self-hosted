@@ -3,6 +3,7 @@
 - main_user: victor
 - webmaster_email: admin@{{ hostname }}
 
+## cloud
 # web
 - web_files: /tmp/www
 
@@ -17,3 +18,8 @@
 # reverse-proxy
 - reverseproxy_db_password: npm
 - reverseproxy_db_root_password: npm
+
+## torrent
+# transmission
+- transmission_username: transmission
+- transmission_password: transmission

@@ -1,0 +1,70 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ../conf/config.yml
+
+  tasks:
+    - name: Create media folders
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /mnt/media/series
+        - /mnt/media/movies
+        - /mnt/media/music
+
+    - name: Start Transmission
+      community.docker.docker_container:
+        state: started
+        name: transmission
+        image: linuxserver/transmission
+        restart_policy: unless-stopped
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: Europe/Paris
+          # TRANSMISSION_WEB_HOME: /combustion-release/
+          USER: "{{ transmission_username | quote }}"
+          PASS: "{{ transmission_password | quote }}"
+          # WHITELIST: iplist
+          # HOST_WHITELIST: dnsnane list
+        volumes:
+          - /mnt/transmission:/config
+          - /mnt/downloads:/downloads
+          - /mnt/torrents:/watch
+        ports:
+          - 9091:9091
+          - 51413:51413
+          - 51413:51413/udp
+
+    - name: Start mStream
+      community.docker.docker_container:
+        state: started
+        name: mstream
+        image: linuxserver/mstream
+        restart_policy: unless-stopped
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: Europe/Paris
+        volumes:
+          - /mnt/mstream:/config
+          - /mnt/media/music:/music:ro
+        ports:
+          - 3000:3000
+
+    - name: "Configure firewall: allow mStream"
+      community.general.ufw:
+        rule: allow
+        port: "3000"
+
+    - name: "Configure firewall: allow Transmission (web)"
+      community.general.ufw:
+        rule: allow
+        port: "9091"
+
+    - name: "Configure firewall: allow Transmission (p2p)"
+      community.general.ufw:
+        rule: allow
+        port: "51413"
