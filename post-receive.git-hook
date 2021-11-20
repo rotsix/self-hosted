@@ -12,5 +12,5 @@ log () { echo -e "$PREFIX $1$RESET"; }
 
 while read -r _ _ _; do
 	log "Pushing to GitHub..."
-	$GIT push github
+	$GIT push --all github
 done
