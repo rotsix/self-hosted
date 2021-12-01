@@ -59,12 +59,11 @@
         rule: allow
         port: "3000"
 
-    - name: "Configure firewall: allow Transmission (web)"
+    - name: "Configure firewall: allow Transmission"
       community.general.ufw:
         rule: allow
-        port: "9091"
+        port: "{{ item }}"
+      loop:
+        - "9091"
+        - "51413"
 
-    - name: "Configure firewall: allow Transmission (p2p)"
-      community.general.ufw:
-        rule: allow
-        port: "51413"
