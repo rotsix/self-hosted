@@ -23,13 +23,6 @@
     #########
     ### Users
 
-    - name: Create '{{ main_user }}' user
-      ansible.builtin.user:
-        name: "{{ main_user }}"
-        generate_ssh_key: yes
-        ssh_key_bits: 2048
-        groups: wheel,users,docker
-
     - name: Create 'git' user
       ansible.builtin.user:
         name: git

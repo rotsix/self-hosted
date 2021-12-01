@@ -36,6 +36,7 @@
     - name: Update current Docker images
       ansible.builtin.shell: |
         docker rm -f $(docker ps -a -q) || true
+        docker image prune -f
         docker images | grep -v '^REPO' | sed 's/ \+/:/g' | cut -d: -f1,2 | xargs -L1 -r docker pull
 
     - name: Enable UFW service
@@ -54,3 +55,10 @@
         rule: limit
         port: ssh
         proto: tcp
+
+    - name: Create '{{ main_user }}' user
+      ansible.builtin.user:
+        name: "{{ main_user }}"
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        groups: wheel,users,docker
