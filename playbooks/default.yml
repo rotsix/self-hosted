@@ -4,6 +4,11 @@
     - ../conf/config.yml
 
   tasks:
+    - name: Refresh pacman keys
+      ansible.builtin.shell: |
+        pacman-key --init
+        pacman-key --populate
+
     - name: Update system
       community.general.pacman:
         update_cache: yes
