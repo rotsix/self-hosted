@@ -20,19 +20,9 @@ Vagrant.configure("2") do |config|
     host.vm.hostname = "host"
   end
 
-  config.vm.provision :ansible do |ansible|
-    ansible.playbook = "../playbooks/default.yml"
-  end
-
-  config.vm.provision :ansible do |ansible|
-    ansible.playbook = "../playbooks/cloud.yml"
-  end
-
-  config.vm.provision :ansible do |ansible|
-    ansible.playbook = "../playbooks/torrent.yml"
-  end
-
-  config.vm.provision :ansible do |ansible|
-    ansible.playbook = "../playbooks/debug.yml"
+  ["default", "cloud", "torrent", "debug"].each do |pb|
+    config.vm.provision :ansible do |ansible|
+      ansible.playbook = "../playbooks/" + pb + ".yml"
+    end
   end
 end
