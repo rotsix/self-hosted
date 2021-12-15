@@ -15,13 +15,13 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /mnt/conf
+        mode: preserve
       loop:
         - ../conf/cloud/cloud
         - ../conf/cloud/web
 
-
     #########
-    ### Users
+    ### Git user
 
     - name: Create 'git' user
       ansible.builtin.user:
@@ -34,7 +34,7 @@
         skeleton: "false"
 
     - name: Disable 'git' password
-      ansible.builtin.shell: passwd -d git
+      ansible.builtin.command: passwd -d git
 
     - name: Copy git shell commands
       ansible.builtin.copy:
