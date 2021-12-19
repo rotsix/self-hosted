@@ -108,6 +108,8 @@ case "$1" in
 				prod)  deploy_prod ;;
 				*)     help ;;
 			esac
+		else
+			help
 		fi
 		;;
 	destroy)
@@ -120,6 +122,8 @@ case "$1" in
 				all)   destroy_local; destroy_aws; destroy_prod ;;
 				*)     help ;;
 			esac
+		else
+			help
 		fi
 		;;
 	ssh)
@@ -130,6 +134,8 @@ case "$1" in
 				prod)  ssh "$(yq -r '.main_user' "$CONF")@$(yq -r '.hostname' "$CONF")" ;;
 				*)	   help ;;
 			esac
+		else
+			help
 		fi
 		;;
 	*) help	;;
