@@ -181,6 +181,12 @@
         networks:
           - name: cloud-app
 
+    - name: Enable Cloud-app background jobs
+      ansible.builtin.cron:
+        name: "Enable NextCloud background jobs"
+        minute: "*/5"
+        job: "docker exec -u 82 cloud-app php -f /var/www/html/cron.php"
+
     - name: Start Cloud proxy
       community.docker.docker_container:
         state: started
