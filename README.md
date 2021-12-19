@@ -27,7 +27,7 @@ The architecture consists yet of the following components:
 	- Transmission to manage the torrents (domain.tld:9091)
 	- music streaming with mStream (`domain.tld:3000`)
 
-![architecture diagram](./docs/architecture.png "Architecure diagram")
+<img src="./docs/architecture.png" width="585" height="1177">
 
 
 ## Configuration
@@ -57,10 +57,10 @@ Note that the `default` playbook is run before any other module.
 ```yml
 - url: domain.tld
   modules:
-	- cloud
+    - cloud
 - url: myrpi3
   modules:
-	- torrent
+    - torrent
 ```
 
 

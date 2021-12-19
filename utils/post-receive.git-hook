@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-PROD_DIR=$(pwd)
+PROD_DIR=$(pwd | sed -E 's:/([a-zA-Z0-9_-]+)\.git:/.\1-clone:g')
 GIT="git --work-tree=$PROD_DIR --git-dir=$PROD_DIR/.git"
 
 BOLD="\e[1m"
