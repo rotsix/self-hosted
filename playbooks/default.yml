@@ -1,0 +1,69 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ../conf/config.yml
+
+  tasks:
+    - name: Refresh pacman keys
+      ansible.builtin.shell: |
+        pacman-key --init
+        pacman-key --populate
+
+    - name: Update system
+      community.general.pacman:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install dependencies
+      community.general.pacman:
+        name:
+          - docker
+          - git
+          - python
+          - python-docker
+          - sudo
+          - ufw
+        state: present
+
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ hostname }}"
+
+    - name: Reboot
+      ansible.builtin.reboot:
+
+    - name: Enable Docker service
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Update current Docker images
+      ansible.builtin.shell: |
+        docker rm -f $(docker ps -a -q) || true
+        docker image prune -f
+        docker images | grep -v '^REPO' | sed 's/ \+/:/g' | cut -d: -f1,2 | xargs -L1 -r docker pull
+
+    - name: Enable UFW service
+      ansible.builtin.systemd:
+        name: ufw
+        state: started
+        enabled: yes
+
+    - name: "Configure firewall: default deny"
+      community.general.ufw:
+        state: enabled
+        policy: deny
+
+    - name: "Configure firewall: restrict ssh"
+      community.general.ufw:
+        rule: limit
+        port: ssh
+        proto: tcp
+
+    - name: Create '{{ main_user }}' user
+      ansible.builtin.user:
+        name: "{{ main_user }}"
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        groups: wheel,users,docker

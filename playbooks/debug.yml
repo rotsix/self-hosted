@@ -1,0 +1,22 @@
+- hosts: all
+
+  tasks:
+    - name: "Reset firewall rules"
+      community.general.ufw:
+        state: reset
+      become: yes
+
+    - name: "Install debug packages"
+      community.general.pacman:
+        name:
+          - stow
+        state: present
+      become: yes
+
+    - name: "Clone dotfiles"
+      ansible.builtin.git:
+        repo: "https://github.com/rotsix/dotfiles"
+        dest: ~/dotfiles
+
+    - name: "Deploy dotfiles"
+      ansible.builtin.shell: ~/dotfiles/deploy.sh server

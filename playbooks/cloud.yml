@@ -1,62 +1,27 @@
 - hosts: all
   become: yes
   vars_files:
-    - ./config.yml
+    - ../conf/config.yml
+  vars:
+    - healthcheck_postgres: pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
+    - healthcheck_mysql: mysqladmin ping -unpm -p{{ reverseproxy_db_password | quote }}
 
   tasks:
 
-    #############################
-    ### System configurations ###
-    #############################
-
-    ######################
-    ### System and updates
+    ################
+    ### Config files
 
     - name: Copy config files
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /mnt/conf
+        mode: preserve
       loop:
-        - cloud
-        - web
-
-    - name: Update system
-      community.general.pacman:
-        update_cache: yes
-        upgrade: yes
-
-    - name: Install dependencies
-      community.general.pacman:
-        name:
-          - docker
-          - python
-          - python-docker
-          - git
-          - termite-terminfo
-          - ufw
-          - sudo
-        state: present
-
-    - name: Start Docker daemon
-      ansible.builtin.systemd:
-        name: docker
-        state: started
-        enabled: yes
-
-    - name: Set hostname
-      ansible.builtin.hostname:
-        name: "{{ hostname }}"
-
+        - ../conf/cloud/cloud
+        - ../conf/cloud/web
 
     #########
-    ### Users
-
-    - name: Create '{{ main_user }}' user
-      ansible.builtin.user:
-        name: "{{ main_user }}"
-        generate_ssh_key: yes
-        ssh_key_bits: 2048
-        groups: wheel,users,docker
+    ### Git user
 
     - name: Create 'git' user
       ansible.builtin.user:
@@ -69,30 +34,18 @@
         skeleton: "false"
 
     - name: Disable 'git' password
-      ansible.builtin.shell: passwd -d git
+      ansible.builtin.command: passwd -d git
 
     - name: Copy git shell commands
       ansible.builtin.copy:
-        src: ./git-shell-commands
+        src: ../conf/cloud/git-shell-commands
         dest: /home/git
         owner: git
         group: git
         mode: preserve
 
-
     ############
     ### Firewall
-
-    - name: "Configure firewall: default deny"
-      community.general.ufw:
-        state: enabled
-        policy: deny
-
-    - name: "Configure firewall: restrict ssh"
-      community.general.ufw:
-        rule: limit
-        port: ssh
-        proto: tcp
 
     - name: "Configure firewall: allow http"
       community.general.ufw:
@@ -104,10 +57,8 @@
         rule: allow
         port: https
 
-
-    #######################
-    ### Docker networks ###
-    #######################
+    ###################
+    ### Docker networks
 
     - name: "Create Docker network: git"
       community.docker.docker_network:
@@ -128,7 +79,6 @@
     - name: "Create Docker network: reverseproxy"
       community.docker.docker_network:
         name: reverseproxy
-
 
     #######################
     ### Docker services ###
@@ -165,7 +115,6 @@
         networks:
           - name: web
 
-
     #######
     ### Git
 
@@ -188,7 +137,6 @@
         networks:
           - name: git
 
-
     #########
     ### Cloud
 
@@ -205,13 +153,13 @@
           POSTGRES_ROOT_PASSWORD: "{{ cloud_db_root_password | quote }}"
         volumes:
           - /mnt/cloud-db:/var/lib/postgresql/data
+        healthcheck:
+          test: "{{ healthcheck_postgres }}"
         networks:
           - name: cloud-app
 
     - name: Wait for the database to be ready
-      command: >
-        docker exec cloud-db
-        pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
+      command: docker exec cloud-db {{ healthcheck_postgres }}
       register: result
       until: not result.rc
       retries: 30
@@ -248,7 +196,6 @@
           - name: cloud-app
           - name: cloud
 
-
     ###############
     ### Proxy & SSL
 
@@ -265,13 +212,13 @@
           MYSQL_ROOT_PASSWORD: "{{ reverseproxy_db_root_password | quote }}"
         volumes:
           - /mnt/reverseproxy-db:/var/lib/mysql
+        healthcheck:
+          test: "{{ healthcheck_mysql }}"
         networks:
           - name: reverseproxy
 
     - name: Wait for the database to be ready
-      command: >
-        docker exec reverseproxy-db
-        mysqladmin ping -unpm -p{{ reverseproxy_db_password | quote }}
+      command: docker exec reverseproxy-db {{ healthcheck_mysql }}
       register: result
       until: not result.rc
       retries: 30
@@ -301,7 +248,6 @@
           - name: git
           - name: web
           - name: cloud
-
 
   #- name: Start proxy
     #community.docker.docker_container:

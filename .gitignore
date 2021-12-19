@@ -2,5 +2,8 @@ volumes/
 web/html/_site
 web/html/.jekyll-cache
 .vagrant
+.terraform
+*.tfstate
+*.tfstate.*
 WIP/
-config.yml
+**/config.yml
