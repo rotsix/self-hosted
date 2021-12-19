@@ -181,6 +181,12 @@
         networks:
           - name: cloud-app
 
+    - name: Install Cloud-app dependencies
+      community.general.pacman:
+        name:
+          - cronie
+        state: present
+
     - name: Enable Cloud-app background jobs
       ansible.builtin.cron:
         name: "Enable NextCloud background jobs"
