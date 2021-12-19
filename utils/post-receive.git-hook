@@ -11,6 +11,7 @@ PREFIX="$BOLD$BLUE::$RESET$BOLD"
 log () { echo -e "$PREFIX $1$RESET"; }
 
 while read -r _ _ _; do
+	$GIT pull
 	log "Pushing to GitHub..."
 	$GIT push --all github
 done
