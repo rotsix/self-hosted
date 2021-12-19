@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-PROD_DIR=$(pwd | sed -E 's:/([a-zA-Z0-9_-]+)\.git:/.\1-clone:g')
-GIT="git --work-tree=$PROD_DIR --git-dir=$PROD_DIR/.git"
-
 BOLD="\e[1m"
 BLUE="\e[34m"
 RESET="\e[0m"
@@ -11,7 +8,6 @@ PREFIX="$BOLD$BLUE::$RESET$BOLD"
 log () { echo -e "$PREFIX $1$RESET"; }
 
 while read -r _ _ _; do
-	$GIT pull
 	log "Pushing to GitHub..."
-	$GIT push --all github
+	git push --mirror github
 done
