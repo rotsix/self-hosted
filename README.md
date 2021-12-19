@@ -7,8 +7,8 @@ The following packages have to be installed to run the whole project:
 
 - On host:
 	- `ansible`: deploy a module to the target machine
+	- `yq`: parse config
 	- for testing purposes (optional):
-		- `yq`: parse config
 		- `vagrant` + `libvirt`: deploy on localhost
 		- `terraform` + `aws-cli` + `gandi`: deploy on AWS and set CNAME
 
