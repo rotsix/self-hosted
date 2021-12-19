@@ -1,25 +1,35 @@
-# general options
-- hostname: localhost
-- main_user: victor
-- webmaster_email: admin@{{ hostname }}
+## general options
+hostname: localhost
+main_user: victor
+webmaster_email: admin@{{ hostname }}
+
+## prod deployment
+prod:
+  - url: {{ hostname }}
+    modules:
+      - cloud
+      - torrent
 
 ## cloud
 # web
-- web_files: /tmp/www
+web_files: /tmp/www
 
 # git
-- git_repos: /home/git
-- git_sitename: Git Sources
+git_repos: /home/git
+git_sitename: Git Sources
 
 # cloud
-- cloud_db_password: nextcloud
-- cloud_db_root_password: nextcloud
+cloud_db_password: nextcloud
+cloud_db_root_password: nextcloud
 
 # reverse-proxy
-- reverseproxy_db_password: npm
-- reverseproxy_db_root_password: npm
+reverseproxy_db_password: npm
+reverseproxy_db_root_password: npm
 
 ## torrent
 # transmission
-- transmission_username: transmission
-- transmission_password: transmission
+transmission_username: transmission
+transmission_password: transmission
+
+## dev variables
+gandi_key: helloworld
