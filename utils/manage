@@ -13,7 +13,7 @@ warn () { echo -e "\e[31m\e[1m[·] $*\e[0m"; "$@" ; }
 
 ## LOCAL
 
-deploy_local () { vagrant up ; }
+deploy_local () { vagrant up --provision ; }
 destroy_local () { warn vagrant destroy ; }
 
 
