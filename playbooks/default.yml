@@ -6,8 +6,9 @@
   tasks:
     - name: Refresh pacman keys
       ansible.builtin.shell: |
+        rm -rf /etc/pacman.d/gnupg
         pacman-key --init
-        pacman-key --populate
+        pacman-key --populate archlinux
 
     - name: Update system
       community.general.pacman:
