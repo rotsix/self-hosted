@@ -26,57 +26,67 @@ deploy_aws () {
     gandi_key=$(yq -r '.gandi_key' "$CONF")
 
     ansible () {
-    	ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -e "hostname=$PREFIX_AWS.$hostname" -u arch -i "$ip," --key-file ~/aws.pem "$DIR/playbooks/$1".yml
+        ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -e "hostname=$PREFIX_AWS.$hostname" -u arch -i "$ip," --key-file ~/aws.pem "$DIR/playbooks/$1".yml
     }
-    ansible default
-    ansible cloud
-    ansible torrent
-    ansible debug
 
-	gandi_add () {
-		curl -X POST \
-			-H "authorization: Apikey $gandi_key" \
-  			-H 'content-type: application/json' \
-			-d "{\"rrset_name\":\"$1\",\"rrset_type\":\"A\",\"rrset_values\":[\"$ip\"]}" \
-  			"https://api.gandi.net/v5/livedns/domains/$hostname/records"
-	}
-	gandi_add "$PREFIX_AWS"
-	gandi_add "*.$PREFIX_AWS"
+    if [ -n "$playbooks" ]; then
+        # run only specified playbooks
+        for playbook in $playbooks; do
+            ansible "$playbook"
+        done
+    else
+        # run all playbooks
+        ansible default
+        ansible router
+        ansible cloud
+        ansible torrent
+        ansible debug
+    fi
+
+    gandi_add () {
+        curl -X POST \
+            -H "authorization: Apikey $gandi_key" \
+            -H 'content-type: application/json' \
+            -d "{\"rrset_name\":\"$1\",\"rrset_type\":\"A\",\"rrset_values\":[\"$ip\"],\"rrset_ttl\":300}" \
+            "https://api.gandi.net/v5/livedns/domains/$hostname/records"
+    }
+    gandi_add "$PREFIX_AWS"
+    gandi_add "*.$PREFIX_AWS"
 }
 
 destroy_aws () {
-	ip=$(terraform output -no-color | grep -Eo '[0-9]+\.[0-9\.]+')
-	hostname=$(yq -r '.hostname' "$CONF")
-	warn terraform destroy
-	if [ -n "$ip" ]; then
-    	gandi_key=$(yq -r '.gandi_key' "$CONF")
-		warn curl -X DELETE -H "authorization: Apikey $gandi_key" "https://api.gandi.net/v5/livedns/domains/$hostname/records/dev"
-		warn curl -X DELETE -H "authorization: Apikey $gandi_key" "https://api.gandi.net/v5/livedns/domains/$hostname/records/*.dev"
-	else
-		log "no DNS record registered"
-	fi
+    ip=$(terraform output -no-color | grep -Eo '[0-9]+\.[0-9\.]+')
+    hostname=$(yq -r '.hostname' "$CONF")
+    warn terraform destroy
+    if [ -n "$ip" ]; then
+        gandi_key=$(yq -r '.gandi_key' "$CONF")
+        warn curl -X DELETE -H "authorization: Apikey $gandi_key" "https://api.gandi.net/v5/livedns/domains/$hostname/records/dev"
+        warn curl -X DELETE -H "authorization: Apikey $gandi_key" "https://api.gandi.net/v5/livedns/domains/$hostname/records/*.dev"
+    else
+        log "no DNS record registered"
+    fi
 }
 
 
 ## PROD
 
 deploy_prod () {
-	# config file is a list of (url, modules) pairs
-	# prod:
-	#   - url: domain.tld
-	#     modules:
-	#       - a
-	#       - b
+    # config file is a list of (url, modules) pairs
+    # prod:
+    #   - url: domain.tld
+    #     modules:
+    #       - a
+    #       - b
 
-	yq -cr '.prod[]' "$CONF" | while read -r host; do
-		url=$(yq -cr '.url' <<< "$host")
-		# at first, deploy 'default' playbook
-		ansible-playbook -i "$url," "$DIR/playbooks/default.yml"
+    yq -cr '.prod[]' "$CONF" | while read -r host; do
+        url=$(yq -cr '.url' <<< "$host")
+        # at first, deploy 'default' playbook
+        ansible-playbook -i "$url," "$DIR/playbooks/default.yml"
 
-		yq -cr '.modules[]' <<< "$host" | while read -r module; do
-			ansible-playbook -i "$url," "$DIR/playbooks/$module".yml
-		done
-	done
+        yq -cr '.modules[]' <<< "$host" | while read -r module; do
+            ansible-playbook -i "$url," "$DIR/playbooks/$module".yml
+        done
+    done
 }
 
 destroy_prod () { echo "4B0RT 4ND K1LL" ; echo "sudo rm -rf /" ; }
@@ -85,58 +95,54 @@ destroy_prod () { echo "4B0RT 4ND K1LL" ; echo "sudo rm -rf /" ; }
 ## MAIN
 
 help () {
-	echo "$0 help:"
-	echo -e "    deploy"
-	echo -e "      local  deploy on localhost using vagrant and libvirt"
-	echo -e "      aws    deploy on aws using terraform and set cname on gandi"
-	echo -e "      prod   deploy on production"
-	echo -e "    destroy  local | aws | prod | all"
-	echo -e "    ssh      local | aws | prod"
+    echo "$0 help:"
+    echo -e "    deploy"
+    echo -e "      local  deploy on localhost using vagrant and libvirt"
+    echo -e "      aws    deploy on aws using terraform and set cname on gandi"
+    echo -e "      prod   deploy on production"
+    echo -e "    destroy  local | aws | prod | all"
+    echo -e "    ssh      local | aws | prod"
 }
 
-if [ -z "$*" ]; then
-	help
-	exit
+if [ "$#" -lt 2 ]; then
+    help
+    exit
 fi
 
-case "$1" in
-	deploy)
-		if [ -n "${2+x}" ]; then
-			case "$2" in
-				local) deploy_local ;;
-				aws)   deploy_aws ;;
-				prod)  deploy_prod ;;
-				*)     help ;;
-			esac
-		else
-			help
-		fi
-		;;
-	destroy)
-		set +e
-		if [ -n "${2+x}" ]; then
-			case "$2" in
-				local) destroy_local ;;
-				aws)   destroy_aws ;;
-				prod)  destroy_prod ;;
-				all)   destroy_local; destroy_aws; destroy_prod ;;
-				*)     help ;;
-			esac
-		else
-			help
-		fi
-		;;
-	ssh)
-		if [ -n "${2+x}" ]; then
-			case "$2" in
-				local) vagrant ssh ;;
-				aws)   ssh -i ~/aws.pem "arch@$(terraform output -no-color | grep -Eo '[0-9]+\.[0-9\.]+')" ;;
-				prod)  ssh "$(yq -r '.main_user' "$CONF")@$(yq -r '.hostname' "$CONF")" ;;
-				*)	   help ;;
-			esac
-		else
-			help
-		fi
-		;;
-	*) help	;;
+action=$1
+env=$2
+shift
+shift
+playbooks=$*
+
+case "$action" in
+    deploy)
+        case "$env" in
+            local) deploy_local ;;
+            aws)   deploy_aws ;;
+            prod)  deploy_prod ;;
+            *)     help ;;
+        esac
+        ;;
+    destroy)
+        set +e
+        case "$env" in
+            local) destroy_local ;;
+            aws)   destroy_aws ;;
+            prod)  destroy_prod ;;
+            all)   destroy_local; destroy_aws; destroy_prod ;;
+            *)     help ;;
+        esac
+        ;;
+    ssh)
+        case "$env" in
+            local) vagrant ssh ;;
+            aws)   ssh -i ~/aws.pem "arch@$(terraform output -no-color | grep -Eo '[0-9]+\.[0-9\.]+')" ;;
+            prod)  ssh "$(yq -r '.main_user' "$CONF")@$(yq -r '.hostname' "$CONF")" ;;
+            *)     help ;;
+        esac
+        ;;
+    *) help ;;
 esac
+
+# vim: ts=4 sw=4 et:
