@@ -4,7 +4,6 @@
     - ../conf/config.yml
   vars:
     - healthcheck_postgres: pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
-    - healthcheck_mysql: mysqladmin ping -unpm -p{{ reverseproxy_db_password | quote }}
 
   tasks:
 
@@ -20,7 +19,7 @@
         - ../conf/cloud/cloud
         - ../conf/cloud/web
 
-    #########
+    ############
     ### Git user
 
     - name: Create 'git' user
@@ -60,25 +59,9 @@
     ###################
     ### Docker networks
 
-    - name: "Create Docker network: git"
-      community.docker.docker_network:
-        name: git
-
-    - name: "Create Docker network: web"
-      community.docker.docker_network:
-        name: web
-
-    - name: "Create Docker network: cloud (cloud-proxy+reverse-proxy)"
-      community.docker.docker_network:
-        name: cloud
-
     - name: "Create Docker network: cloud (app+db+proxy)"
       community.docker.docker_network:
-        name: cloud-app
-
-    - name: "Create Docker network: reverseproxy"
-      community.docker.docker_network:
-        name: reverseproxy
+        name: cloud
 
     #######################
     ### Docker services ###
@@ -112,8 +95,9 @@
         volumes:
           - /mnt/conf/web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
           - /mnt/web/html:/usr/share/nginx/html:ro
-        networks:
-          - name: web
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.web.rule: Host(`{{ hostname }}`)
 
     #######
     ### Git
@@ -127,15 +111,17 @@
         command: >-
           uwsgi --plugin python --http11-socket 0.0.0.0:80
           -w klaus.contrib.wsgi_autoreload
-          --env KLAUS_REPOS=/repos --env KLAUS_USE_SMARTHTTP=1
         exposed_ports:
           - "80"
         env:
+          KLAUS_REPOS: /repos
+          KLAUS_USE_SMARTHTTP: "1"
           KLAUS_SITE_NAME: "{{ git_sitename }}"
         volumes:
           - "{{ git_repos }}:/repos:ro"
-        networks:
-          - name: git
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.git.rule: Host(`git.{{ hostname }}`)
 
     #########
     ### Cloud
@@ -156,7 +142,7 @@
         healthcheck:
           test: "{{ healthcheck_postgres }}"
         networks:
-          - name: cloud-app
+          - name: cloud
 
     - name: Wait for the database to be ready
       command: docker exec cloud-db {{ healthcheck_postgres }}
@@ -179,13 +165,19 @@
         volumes:
           - /mnt/cloud:/var/www/html
         networks:
-          - name: cloud-app
+          - name: cloud
 
     - name: Install Cloud-app dependencies
       community.general.pacman:
         name:
           - cronie
         state: present
+
+    - name: Enable cron service
+      ansible.builtin.systemd:
+        name: cronie
+        state: started
+        enabled: yes
 
     - name: Enable Cloud-app background jobs
       ansible.builtin.cron:
@@ -205,92 +197,8 @@
           - /mnt/conf/cloud/nginx.conf:/etc/nginx/nginx.conf:ro
           - /mnt/cloud:/var/www/html:ro
         networks:
-          - name: cloud-app
           - name: cloud
-
-    ###############
-    ### Proxy & SSL
-
-    - name: Start reverse-proxy database
-      community.docker.docker_container:
-        state: started
-        name: reverseproxy-db
-        image: mariadb
-        restart_policy: unless-stopped
-        env:
-          MYSQL_DATABASE: npm
-          MYSQL_USER: npm
-          MYSQL_PASSWORD: "{{ reverseproxy_db_password | quote }}"
-          MYSQL_ROOT_PASSWORD: "{{ reverseproxy_db_root_password | quote }}"
-        volumes:
-          - /mnt/reverseproxy-db:/var/lib/mysql
-        healthcheck:
-          test: "{{ healthcheck_mysql }}"
-        networks:
-          - name: reverseproxy
-
-    - name: Wait for the database to be ready
-      command: docker exec reverseproxy-db {{ healthcheck_mysql }}
-      register: result
-      until: not result.rc
-      retries: 30
-      delay: 1
-
-    - name: Start reverse-proxy
-      community.docker.docker_container:
-        state: started
-        name: reverseproxy
-        image: jc21/nginx-proxy-manager
-        restart_policy: unless-stopped
-        env:
-          DB_MYSQL_HOST: reverseproxy-db
-          DB_MYSQL_PORT: "3306"
-          DB_MYSQL_NAME: npm
-          DB_MYSQL_USER: npm
-          DB_MYSQL_PASSWORD: "{{ reverseproxy_db_password | quote }}"
-        volumes:
-          - /mnt/reverseproxy/data:/data
-          - /mnt/reverseproxy/letsencrypt:/etc/letsencrypt
-        ports:
-          - 80:80
-          - 127.0.0.1:81:81
-          - 443:443
-        networks:
-          - name: reverseproxy
-          - name: git
-          - name: web
-          - name: cloud
-
-  #- name: Start proxy
-    #community.docker.docker_container:
-      #state: started
-      #name: proxy
-      #image: nginxproxy/nginx-proxy:alpine
-      #restart_policy: unless-stopped
-      #env:
-        #ENABLE_IPV6: "true"
-      #volumes:
-        #- /vagrant/proxy/uploadsize.conf:/etc/nginx/conf.d/uploadsize.conf:ro
-        #- /mnt/proxy/certs:/etc/nginx/certs:ro
-        #- /mnt/proxy/vhost.d:/etc/nginx/vhost.d
-        #- /mnt/proxy/html:/usr/share/nginx/html
-        #- /var/run/docker.sock:/tmp/docker.sock:ro
-      #ports:
-        #- 80:80
-        #- 443:443
-      #networks:
-        #- name: git
-        #- name: web
-
-  #- name: Start SSL
-     #community.docker.docker_container:
-     #state: started
-     #name: ssl
-     #image: jrcs/letsencrypt-nginx-proxy-companion
-     #restart_policy: unless-stopped
-     #env:
-       #DEFAULT_EMAIL: "{{ webmaster_email }}"
-     #volumes_from: proxy
-     #volumes:
-       #- /mnt/proxy/certs:/etc/nginx/certs
-       #- /var/run/docker.sock:/var/run/docker.sock:ro
+          - name: bridge
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.cloud.rule: Host(`cloud.{{ hostname }}`)

@@ -1,0 +1,46 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ../conf/config.yml
+
+  tasks:
+    - name: Start reverse-proxy
+      community.docker.docker_container:
+        state: started
+        name: reverseproxy
+        image: traefik
+        restart_policy: unless-stopped
+        command:
+          - --log.level=INFO
+          - --api.dashboard=true
+         #- --api.insecure=true
+          - --providers.docker=true
+          - --providers.docker.exposedbydefault=false
+
+          - --entrypoints.web.address=:80
+          - --entrypoints.websecure.address=:443
+          - --entrypoints.web.http.redirections.entrypoint.to=websecure
+          - --entrypoints.web.http.redirections.entryPoint.scheme=https
+          - --entrypoints.websecure.http.tls=true
+          - --entrypoints.websecure.http.tls.certResolver=myresolver
+
+          - --certificatesresolvers.myresolver.acme.email={{ main_user }}@{{ hostname }}
+         #- --certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+          - --certificatesresolvers.myresolver.acme.tlschallenge=true
+          - --certificatesresolvers.myresolver.acme.httpchallenge=true
+          - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
+
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.reverseproxy.tls: "false"
+          traefik.http.routers.reverseproxy.rule: Host(`traefik.{{ hostname }}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+          traefik.http.routers.reverseproxy.service: api@internal
+          traefik.http.routers.reverseproxy.middlewares: local-network@docker
+          traefik.http.middlewares.local-network.ipwhitelist.sourcerange: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+        ports:
+          - "80:80"
+          - "443:443"
+         #- "8080:8080"

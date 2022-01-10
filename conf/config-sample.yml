@@ -1,6 +1,6 @@
 ## general options
 hostname: localhost
-main_user: victor
+main_user: user
 webmaster_email: admin@{{ hostname }}
 
 ## prod deployment
@@ -21,10 +21,6 @@ git_sitename: Git Sources
 # cloud
 cloud_db_password: nextcloud
 cloud_db_root_password: nextcloud
-
-# reverse-proxy
-reverseproxy_db_password: npm
-reverseproxy_db_root_password: npm
 
 ## torrent
 # transmission
