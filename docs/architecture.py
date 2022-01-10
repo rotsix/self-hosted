@@ -1,9 +1,9 @@
 from diagrams import Diagram, Cluster
 from diagrams.custom import Custom
 from diagrams.generic.network import Firewall
-from diagrams.onprem.database import PostgreSQL, MariaDB
+from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.groupware import Nextcloud
-from diagrams.onprem.network import Nginx
+from diagrams.onprem.network import Nginx, Traefik
 
 
 def main():
@@ -14,9 +14,6 @@ def main():
             mstream = Custom("Audio streaming\ndomain.tld:3000", "icons/mstream.png")
 
         with Cluster("Cloud"):
-            npm = Custom("Reverse proxy\ndomain.tld:81", "icons/npm.png")
-            npm_db = MariaDB("mariadb")
-
             web_proxy = Nginx("domain.tld")
             web_builder = Custom("Personal homepage", "icons/jekyll.png")
 
@@ -27,18 +24,20 @@ def main():
             nc_proxy = Nginx("cloud.domain.tld")
 
             [
-                npm - npm_db,
                 web_proxy - web_builder,
                 klaus,
                 nc_proxy - nc - nc_db,
             ]
 
+        with Cluster("Router"):
+            traefik = Traefik("Reverse proxy\ndomain.tld:8080")
+
         with Cluster("Default"):
             ufw = Firewall("UFW")
             # wg = Custom("wg.domain.tld:51820", "icons/wireguard.png")
 
-
-        [npm, web_proxy, klaus, nc_proxy]
+        [traefik]
+        [web_proxy, klaus, nc_proxy]
         [transmission - mstream]
         [ufw]
 

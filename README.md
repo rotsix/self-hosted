@@ -18,13 +18,14 @@ The following packages have to be installed to run the whole project:
 
 The architecture consists yet of the following components:
 
+- Router module:
+	- Traefik as a reverse-proxy, it handles subdomains and routing to containers
 - Cloud module:
-	- Nginx+TLS reverse-proxy, it handles subdomains and routing to containers
 	- personal homepage, managed by a Jekyll container (`domain.tld`)
 	- NextCloud instance (`cloud.domain.tld`)
 	- git viewer, Klaus (`git.domain.tld`)
 - Torrent module:
-	- Transmission to manage the torrents (domain.tld:9091)
+	- Transmission to manage the torrents (`domain.tld:9091`)
 	- music streaming with mStream (`domain.tld:3000`)
 
 <img src="./docs/architecture.png" width="585" height="1177">
@@ -33,17 +34,17 @@ The architecture consists yet of the following components:
 ## Configuration
 
 A sample configuration is available at `./conf/config-sample.yml`.
-Copy to `./conf/config.yml` and adapt to your setup.
+Copy to `./conf/config.yml` and adapt it.
 
-The git repositories are at `/home/git` by default, this allowing to clone the repositories this way:
+The git repositories are at `/home/git` by default, this allows to clone the repositories this way:
 
-```sh
+```
 git clone git@domain.tld:repo.git
 ```
 
 Or, using Klaus URL:
 
-```sh
+```
 git clone https://git.domain.tld/repo.git
 ```
 
@@ -51,8 +52,8 @@ The Jenkins input files are stored at `/tmp/www` by default.
 In my case, they are located at `/home/git/.website-clone` as the sources are in the same directory (but as a bare repository).
 Using the default value without at least `index.html` being present in the default directory may result in an error (likely 404).
 
-About the production deployment, the config file should provide an array of `(url, modules)` pairs like the example below.
-Note that the `default` playbook is run before any other module.
+About the production deployment: the config file should provide a list of `(url, modules)` pairs like the example below.
+Note that the `default` playbook is run before any other module (so no need to add it manually).
 
 ```yml
 - url: domain.tld
@@ -66,17 +67,17 @@ Note that the `default` playbook is run before any other module.
 
 ## Running
 
-> By default, all the docker volumes are located in `/mnt`.
+> By default, all the docker volumes are located in `/mnt` on each server.
 > You may want to backup this directory.
 
 At first, get the sources:
 
-```sh
+```
 git clone https://git.franzi.fr/self-hosted
 ```
 
-As just shown abose, this project is designed around modules (Ansible playbooks).
-Before running the project, set the production architecture in the config file.
+As just shown above, this project is designed around modules (Ansible playbooks).
+Before running the project, set the production architecture in the configuration file.
 
 Once finished, use `./utils/manage` to deploy it.
 
@@ -92,6 +93,10 @@ Once finished, use `./utils/manage` to deploy it.
     destroy  local | aws | prod | all
     ssh      local | aws | prod
 ```
+
+When using the AWS environment, the `manage` script can receive more arguments in order to specify which playbooks to run.
+I.e. `./manage deploy aws cloud torrent`.
+If none are given, it will run all the available playbooks.
 
 
 ## Security
