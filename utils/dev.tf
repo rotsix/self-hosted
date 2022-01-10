@@ -5,7 +5,7 @@ provider "aws" {
 
 resource "aws_instance" "sh_dev" {
   ami           = "ami-0d27a493ef7464778"
-  instance_type = "t2.micro"
+  instance_type = "t2.small"
   key_name      = "aws"
 
   provisioner "remote-exec" {
