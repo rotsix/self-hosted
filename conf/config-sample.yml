@@ -5,7 +5,7 @@ webmaster_email: admin@{{ hostname }}
 
 ## prod deployment
 prod:
-  - url: {{ hostname }}
+  - url: "{{ hostname }}"
     modules:
       - cloud
       - torrent
