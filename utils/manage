@@ -80,6 +80,13 @@ deploy_prod () {
 
     yq -cr '.prod[]' "$CONF" | while read -r host; do
         url=$(yq -cr '.url' <<< "$host")
+
+        # TODO how to parse jinja2 vars in a yml file?
+        var=$(echo "$url" | grep -x '{{ .* }}' | sed 's/[{ }]//g' || true)
+        if [ -n "$var" ] ; then
+            url=$(yq -cr ".$var" "$CONF")
+        fi
+
         # at first, deploy 'default' playbook
         ansible-playbook -i "$url," "$DIR/playbooks/default.yml"
 
