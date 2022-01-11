@@ -7,7 +7,7 @@
       become: yes
 
     - name: "Install debug packages"
-      community.general.pacman:
+      ansible.builtin.package:
         name:
           - stow
         state: present

@@ -168,7 +168,7 @@
           - name: cloud
 
     - name: Install Cloud-app dependencies
-      community.general.pacman:
+      ansible.builtin.package:
         name:
           - cronie
         state: present

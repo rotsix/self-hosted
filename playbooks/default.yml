@@ -16,7 +16,7 @@
         upgrade: yes
 
     - name: Install dependencies
-      community.general.pacman:
+      ansible.builtin.package:
         name:
           - docker
           - git
