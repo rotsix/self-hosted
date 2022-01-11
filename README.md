@@ -128,4 +128,5 @@ About passwords, please use long passwords with both letters, digits and special
 
 - use Traefik instead of NPM
 - setup Wireguard + PiHole
+- real bkp module with borg on each server
 - Podman?
