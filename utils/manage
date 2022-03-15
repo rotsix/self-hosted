@@ -82,7 +82,7 @@ deploy_prod () {
         url=$(yq -cr '.url' <<< "$host")
 
         # TODO how to parse jinja2 vars in a yml file?
-        var=$(echo "$url" | grep -x '{{ .* }}' | sed 's/[{ }]//g' || true)
+        var=$(echo "$url" | grep -o '{{ .* }}' | sed 's/[{ }]//g' || true)
         if [ -n "$var" ] ; then
             url=$(yq -cr ".$var" "$CONF")
         fi
