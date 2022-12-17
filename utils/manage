@@ -4,11 +4,21 @@ set -euo pipefail
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 
 CONF=$DIR/conf/config.yml
-PREFIX_AWS=dev
 
 log () { echo -e "\e[33m\e[1m[·] $*\e[0m" ; }
 # WARNING this function evaluates raw string vv
 warn () { echo -e "\e[31m\e[1m[·] $*\e[0m"; "$@" ; }
+
+replace_vars () {
+        # TODO how to parse jinja2 vars in a yml file?
+        var=$(echo "$1" | grep -o '{{ .* }}')
+        if [ -n "$var" ] ; then
+            value=$(yq -cr ".$(echo "$var" | sed 's/[{ }]//g')" "$CONF")
+            echo "${1//$var/$value}"
+        else
+            echo "$1"
+        fi
+    }
 
 
 ## LOCAL
@@ -23,10 +33,9 @@ deploy_aws () {
     terraform apply
     ip=$(terraform output -no-color | grep -Eo '[0-9]+\.[0-9\.]+')
     hostname=$(yq -r '.hostname' "$CONF")
-    gandi_key=$(yq -r '.gandi_key' "$CONF")
 
     ansible () {
-        ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -e "hostname=$PREFIX_AWS.$hostname" -u arch -i "$ip," --key-file ~/aws.pem "$DIR/playbooks/$1".yml
+        ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -e "inventory_hostname=$hostname" -u arch -i "$ip," --key-file ~/aws.pem "$DIR/playbooks/$1".yml
     }
 
     if [ -n "$playbooks" ]; then
@@ -42,29 +51,10 @@ deploy_aws () {
         ansible torrent
         ansible debug
     fi
-
-    gandi_add () {
-        curl -X POST \
-            -H "authorization: Apikey $gandi_key" \
-            -H 'content-type: application/json' \
-            -d "{\"rrset_name\":\"$1\",\"rrset_type\":\"A\",\"rrset_values\":[\"$ip\"],\"rrset_ttl\":300}" \
-            "https://api.gandi.net/v5/livedns/domains/$hostname/records"
-    }
-    gandi_add "$PREFIX_AWS"
-    gandi_add "*.$PREFIX_AWS"
 }
 
 destroy_aws () {
-    ip=$(terraform output -no-color | grep -Eo '[0-9]+\.[0-9\.]+')
-    hostname=$(yq -r '.hostname' "$CONF")
     warn terraform destroy
-    if [ -n "$ip" ]; then
-        gandi_key=$(yq -r '.gandi_key' "$CONF")
-        warn curl -X DELETE -H "authorization: Apikey $gandi_key" "https://api.gandi.net/v5/livedns/domains/$hostname/records/dev"
-        warn curl -X DELETE -H "authorization: Apikey $gandi_key" "https://api.gandi.net/v5/livedns/domains/$hostname/records/*.dev"
-    else
-        log "no DNS record registered"
-    fi
 }
 
 
@@ -122,8 +112,13 @@ shift
 shift
 playbooks=$*
 
+
 case "$action" in
     deploy)
+        # FIXME do it better
+        backup_server=$(replace_vars "$(yq -cr '.backup_server' "$CONF")")
+        sed -Ei "s/backup@[a-z0-9\.]+/backup@$backup_server/" ../conf/backup/config.yaml
+
         case "$env" in
             local) deploy_local ;;
             aws)   deploy_aws ;;
