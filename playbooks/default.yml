@@ -9,6 +9,7 @@
         rm -rf /etc/pacman.d/gnupg
         pacman-key --init
         pacman-key --populate archlinux
+        pacman -Sy --noconfirm archlinux-keyring && pacman -Su --noconfirm
 
     - name: Update system
       community.general.pacman:
