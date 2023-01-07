@@ -3,12 +3,22 @@ hostname: localhost
 main_user: user
 webmaster_email: admin@{{ hostname }}
 
+# vagrant
+backup_server: host
+# dev
+backup_server: "dev.{{ hostname }}"
+# prod
+backup_server: # url
+
 ## prod deployment
 prod:
   - url: "{{ hostname }}"
+    ip: 12.34.56.78
     modules:
       - cloud
       - torrent
+  - url: localhost
+    ip: 127.0.0.1
 
 ## cloud
 # web

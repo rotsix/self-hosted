@@ -1,0 +1,24 @@
+- name: Create 'backup' user
+  ansible.builtin.user:
+    name: backup
+
+- name: Add authorized keys
+  ansible.posix.authorized_key:
+    user: backup
+    key: "{{ lookup('file', item) }}"
+    path: /home/backup/.ssh/authorized_keys
+    # FIXME
+    # key_options: command='borg serve --restrict-to-path /home/backup/{{ item.split('/')[-1] | replace('.pubkey', '') }}',restrict
+      # cd /home/backup/{{ item.split('/')[-1] | replace('.pubkey', '') }};
+  with_fileglob:
+      - "../conf/backup/ssh/*.pubkey"
+
+- name: Create Borg directories
+  ansible.builtin.file:
+    path: "/home/backup/{{ item.split('/')[-1] | replace('.pubkey', '') }}"
+    owner: backup
+    group: backup
+    mode: 0700
+    state: directory
+  with_fileglob:
+      - "../conf/backup/ssh/*.pubkey"

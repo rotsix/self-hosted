@@ -53,23 +53,30 @@ The Jenkins input files are stored at `/tmp/www` by default.
 In my case, they are located at `/home/git/.website-clone` as the sources are in the same directory (but as a bare repository).
 Using the default value without at least `index.html` being present in the default directory may result in an error (likely 404).
 
-About the production deployment: the config file should provide a list of `(url, modules)` pairs like the example below.
+About the production deployment: the config file should provide a list of `(url, ip, modules)` tuples like the example below.
 Note that the `default` playbook is run before any other module (so no need to add it manually).
 
 ```yml
 - url: domain.tld
+  ip: 12.34.56.78
   modules:
     - cloud
 - url: myrpi3
+  ip: 87.65.43.21
   modules:
     - torrent
 ```
+
+The backup server is setup on the machine specified in the `backup_server` variable.
+There is no need to deploy specific modules.
+Note that using variables replacement in this variable **is not possible**.
+Specify the server with its full URL, i.e. `bkp.example.com`.
 
 
 ## Running
 
 > By default, all the docker volumes are located in `/mnt` on each server.
-> You may want to backup this directory.
+> The backups are done by Borg, see [here](#backups).
 
 At first, get the sources:
 
@@ -103,6 +110,16 @@ If none are given, it will run all the available playbooks.
 ## Security
 
 
+### Backups
+
+Backups are enabled on all the machines specified in the config.
+The server is configuried in the `backup_server` variable.
+
+Then, on each client, Borgmatic is enabled to perform Borg backups everyday.
+
+On the backup server, the repositories are under the `backup` user home directory (`/home/backup`), each machine having its own sub-directory.
+
+
 ### System
 
 A [firewall](https://wiki.archlinux.org/title/Ufw) is deployed, it only accepts connections on:
@@ -116,7 +133,7 @@ The other ports are blocked by the firewall and only accessible in the local net
 
 The SSH configuration should be customized to only allow pubkey authentication.
 
-Add keys to the git user in the `/home/git/.authorized_keys`, and create repositories using `git-shell` commands.
+Add keys to the git user in `/home/git/.authorized_keys`, and create repositories using `git-shell` commands.
 
 
 ### Apps
@@ -125,9 +142,24 @@ The applications run in docker containers dispatched over related-only networks 
 About passwords, please use long passwords with both letters, digits and special characters.
 
 
+## Bugs
+
+- `./conf/backup/config.yaml:19: - ssh://backup@backupserver/./{fqdn}`
+- `./playbooks/backup-client.yml:29: --encryption none`
+- `./playbooks/backup-server.yml:11: FIXME key_options`
+- `./utils/manage:14: # TODO how to parse jinja2 vars in a yml file?`
+
+
 ## TODO
 
-- use Traefik instead of NPM
-- setup Wireguard + PiHole
-- real bkp module with borg on each server
-- Podman?
+- [X] use Traefik instead of NPM
+- [X] real bkp module with borg on each machine
+- [X] add a links (bookmarks) manager
+- [ ] replace nextcloud
+- [ ] arrange hostnames management
+- [ ] arrange the `conf` directory to not deploy/save it everywhere (split it in `conf`/`assets` dirs?)
+- [ ] setup Wireguard + PiHole
+- [ ] rename 'torrent' to 'media' and use the *arr stack instead
+- [ ] add the torrent sorting script (but as another module?)
+- [ ] Podman?
+-

@@ -1,0 +1,33 @@
+- name: Copy config files
+  ansible.builtin.copy:
+    src: ../conf/backup/borgmatic
+    dest: /etc
+    mode: preserve
+
+- name: Fix backup server
+  ansible.builtin.shell: |
+    sed -Ei "s:backup@[a-z0-9\./\{\}]+:backup@{{ backup_server }}/./{fqdn}:" /etc/borgmatic/config.yaml
+
+- name: Create SSH directory
+  ansible.builtin.file:
+    path: /root/.ssh
+    mode: 0700
+    state: directory
+
+- name: Copy private key
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /root/.ssh/id_rsa
+    mode: 0600
+  with_fileglob:
+      - "../conf/backup/ssh/{{ inventory_hostname }}.privkey"
+
+- name: Enable Borgmatic service
+  ansible.builtin.systemd:
+    name: borgmatic.timer
+    state: started
+    enabled: yes
+
+- name: Init Borg repository
+  ansible.builtin.shell: |
+    borgmatic init --encryption none

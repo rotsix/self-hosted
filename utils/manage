@@ -10,11 +10,12 @@ log () { echo -e "\e[33m\e[1m[·] $*\e[0m" ; }
 warn () { echo -e "\e[31m\e[1m[·] $*\e[0m"; "$@" ; }
 
 replace_vars () {
-        # TODO how to parse jinja2 vars in a yml file?
         var=$(echo "$1" | grep -o '{{ .* }}')
         if [ -n "$var" ] ; then
             value=$(yq -cr ".$(echo "$var" | sed 's/[{ }]//g')" "$CONF")
-            echo "${1//$var/$value}"
+            # NOTE why isn't it working?
+            # replace_vars "${1//$var/$value}"
+            echo $(replace_vars "${1//$var/$value}")
         else
             echo "$1"
         fi
@@ -61,27 +62,38 @@ destroy_aws () {
 ## PROD
 
 deploy_prod () {
-    # config file is a list of (url, modules) pairs
+    # config file is a list of (url, ip, modules) tuples
     # prod:
     #   - url: domain.tld
+    #     ip: 12.34.56.78
     #     modules:
     #       - a
     #       - b
 
+    if [ -n "$playbooks" ]; then
+        echo "passing specific playbooks to prod isn't allowed"
+        echo "just use './manage deploy prod'"
+        exit 1
+    fi
+
+
+    main_user=$(yq -cr '.main_user' "$CONF")
+    ansible () {
+        echo ansible-playbook -u "$main_user" -e "hostname=$1" -i "$2," "$DIR/playbooks/$3".yml
+    }
+
     yq -cr '.prod[]' "$CONF" | while read -r host; do
         url=$(yq -cr '.url' <<< "$host")
+        url=$(replace_vars "$url")
 
-        # TODO how to parse jinja2 vars in a yml file?
-        var=$(echo "$url" | grep -o '{{ .* }}' | sed 's/[{ }]//g' || true)
-        if [ -n "$var" ] ; then
-            url=$(yq -cr ".$var" "$CONF")
-        fi
+        ip=$(yq -cr '.ip' <<< "$host")
 
         # at first, deploy 'default' playbook
-        ansible-playbook -i "$url," "$DIR/playbooks/default.yml"
+        ansible "$url" "$ip" default
 
-        yq -cr '.modules[]' <<< "$host" | while read -r module; do
-            ansible-playbook -i "$url," "$DIR/playbooks/$module".yml
+        modules=$(yq -cr 'select(.modules) | .modules[]' <<< "$host")
+        test -n "$modules" && echo "$modules" | while read -r module; do
+            ansible "$url" "$ip" "$module"
         done
     done
 }
@@ -115,10 +127,6 @@ playbooks=$*
 
 case "$action" in
     deploy)
-        # FIXME do it better
-        backup_server=$(replace_vars "$(yq -cr '.backup_server' "$CONF")")
-        sed -Ei "s/backup@[a-z0-9\.]+/backup@$backup_server/" ../conf/backup/config.yaml
-
         case "$env" in
             local) deploy_local ;;
             aws)   deploy_aws ;;

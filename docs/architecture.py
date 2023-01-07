@@ -37,12 +37,13 @@ def main():
 
         with Cluster("Default"):
             ufw = Firewall("UFW")
+            borg = Custom("Backups", "icons/borg.svg")
             # wg = Custom("wg.domain.tld:51820", "icons/wireguard.png")
 
         [traefik]
         [web_proxy, klaus, nc_proxy]
         [transmission - mstream]
-        [ufw]
+        [ufw - borg]
 
 
 if __name__ == "__main__":

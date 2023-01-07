@@ -19,6 +19,8 @@
     - name: Install dependencies
       ansible.builtin.package:
         name:
+          - borg
+          - borgmatic
           - docker
           - git
           - python
@@ -29,7 +31,7 @@
 
     - name: Set hostname
       ansible.builtin.hostname:
-        name: "{{ hostname }}"
+        name: "{{ inventory_hostname }}"
 
     - name: Reboot
       ansible.builtin.reboot:
@@ -69,3 +71,10 @@
         generate_ssh_key: yes
         ssh_key_bits: 2048
         groups: wheel,users,docker
+
+    - name: Deploy Borg on server
+      ansible.builtin.include_tasks: backup-server.yml
+      when: inventory_hostname == backup_server
+
+    - name: Deploy Borg on client
+      ansible.builtin.include_tasks: backup-client.yml
