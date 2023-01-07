@@ -23,10 +23,13 @@ def main():
             nc_db = PostgreSQL("psql")
             nc_proxy = Nginx("cloud.domain.tld")
 
+            linkding = Custom("Links\nlinks.domain.tld", "icons/linkding.png")
+
             [
                 web_proxy - web_builder,
                 klaus,
                 nc_proxy - nc - nc_db,
+                linkding,
             ]
 
         with Cluster("Router"):

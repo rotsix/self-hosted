@@ -22,6 +22,9 @@ git_sitename: Git Sources
 cloud_db_password: nextcloud
 cloud_db_root_password: nextcloud
 
+# links
+links_password: linkding
+
 ## torrent
 # transmission
 transmission_username: transmission

@@ -12,7 +12,7 @@ The following packages have to be installed to run the whole project:
 		- `vagrant` + `libvirt`: deploy on localhost
 		- `terraform` + `aws-cli` + `gandi`: deploy on AWS and set CNAME
 
-- On target:
+- On target(s):
 	- `python3` (Ansible requirement)
 	- a sudo-able user
 
@@ -24,6 +24,7 @@ The architecture consists yet of the following components:
 	- personal homepage, managed by a Jekyll container (`domain.tld`)
 	- NextCloud instance (`cloud.domain.tld`)
 	- git viewer, Klaus (`git.domain.tld`)
+	- links manager, Linkding (`links.domain.tld`)
 - Torrent module:
 	- Transmission to manage the torrents (`domain.tld:9091`)
 	- music streaming with mStream (`domain.tld:3000`)
