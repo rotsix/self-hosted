@@ -10,6 +10,7 @@
       ansible.builtin.package:
         name:
           - stow
+          - zsh
         state: present
       become: yes
 
@@ -19,4 +20,4 @@
         dest: ~/dotfiles
 
     - name: "Deploy dotfiles"
-      ansible.builtin.shell: ~/dotfiles/deploy.sh server
+      ansible.builtin.shell: ~/dotfiles/deploy.sh minimal
