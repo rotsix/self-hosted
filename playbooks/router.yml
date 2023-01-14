@@ -13,7 +13,8 @@
         command:
           - --log.level=INFO
           - --api.dashboard=true
-         #- --api.insecure=true
+          # API is on port 8080 which is only available on localhost
+          - --api.insecure=true
           - --providers.docker=true
           - --providers.docker.exposedbydefault=false
           - --providers.providersthrottleduration=10s
@@ -26,22 +27,24 @@
           - --entrypoints.websecure.http.tls.certResolver=myresolver
 
           - --certificatesresolvers.myresolver.acme.email={{ main_user }}@{{ hostname }}
-         #- --certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+          ### DEBUG
+          # - --certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
           - --certificatesresolvers.myresolver.acme.tlschallenge=true
           - --certificatesresolvers.myresolver.acme.httpchallenge=true
           - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
 
         labels:
-          traefik.enable: "true"
-          traefik.http.routers.reverseproxy.tls: "false"
-          traefik.http.routers.reverseproxy.rule: Host(`traefik.{{ hostname }}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
-          traefik.http.routers.reverseproxy.service: api@internal
-          traefik.http.routers.reverseproxy.middlewares: local-network@docker
+          traefik.enable: "false"
+          # For later, when the VPN will get deployed
+          # traefik.http.routers.reverseproxy.tls: "false"
+          # traefik.http.routers.reverseproxy.rule: Host(`traefik.{{ hostname }}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+          # traefik.http.routers.reverseproxy.service: api@internal
+          # traefik.http.routers.reverseproxy.middlewares: local-network@docker
           traefik.http.middlewares.local-network.ipwhitelist.sourcerange: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock:ro
-        ports:
+        published_ports:
           - "80:80"
           - "443:443"
-         #- "8080:8080"
+          - "127.0.0.1:8080:8080"

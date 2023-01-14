@@ -79,7 +79,7 @@ deploy_prod () {
 
     main_user=$(yq -cr '.main_user' "$CONF")
     ansible () {
-        echo ansible-playbook -u "$main_user" -e "hostname=$1" -i "$2," "$DIR/playbooks/$3".yml
+        ansible-playbook -u "$main_user" -e "hostname=$1" -i "$2," "$DIR/playbooks/$3".yml
     }
 
     yq -cr '.prod[]' "$CONF" | while read -r host; do

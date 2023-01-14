@@ -22,9 +22,11 @@ The architecture consists yet of the following components:
 	- Traefik as a reverse-proxy, it handles subdomains and routing to containers
 - Cloud module:
 	- personal homepage, managed by a Jekyll container (`domain.tld`)
-	- NextCloud instance (`cloud.domain.tld`)
 	- git viewer, Klaus (`git.domain.tld`)
 	- links manager, Linkding (`links.domain.tld`)
+	- Cal/CardDAV server, baikal (`dav.domain.tld`)
+	- filebrowser (`files.domain.tld`)
+	- files synchronisation using Syncthing
 - Torrent module:
 	- Transmission to manage the torrents (`domain.tld:9091`)
 	- music streaming with mStream (`domain.tld:3000`)
@@ -37,7 +39,7 @@ The architecture consists yet of the following components:
 A sample configuration is available at `./conf/config-sample.yml`.
 Copy to `./conf/config.yml` and adapt it.
 
-The git repositories are at `/home/git` by default, this allows to clone the repositories this way:
+The git repositories are at `/mnt/git` by default, this allows to clone the repositories this way, using the `git` user:
 
 ```
 git clone git@domain.tld:repo.git
@@ -49,8 +51,8 @@ Or, using Klaus URL:
 git clone https://git.domain.tld/repo.git
 ```
 
-The Jenkins input files are stored at `/tmp/www` by default.
-In my case, they are located at `/home/git/.website-clone` as the sources are in the same directory (but as a bare repository).
+The Jenkins input files are stored at `/var/www` by default.
+In my case, they are located at `/mnt/git/.website-clone` as the sources are in the same directory (but as a bare repository).
 Using the default value without at least `index.html` being present in the default directory may result in an error (likely 404).
 
 About the production deployment: the config file should provide a list of `(url, ip, modules)` tuples like the example below.
@@ -68,9 +70,8 @@ Note that the `default` playbook is run before any other module (so no need to a
 ```
 
 The backup server is setup on the machine specified in the `backup_server` variable.
-There is no need to deploy specific modules.
-Note that using variables replacement in this variable **is not possible**.
-Specify the server with its full URL, i.e. `bkp.example.com`.
+
+It is possible to deploy the `router` mmodule on multiple servers, so each machine handles a specific subdomain.
 
 
 ## Running
@@ -89,7 +90,7 @@ Before running the project, set the production architecture in the configuration
 
 Once finished, use `./utils/manage` to deploy it.
 
-> /!\ on local host and AWS, the following script runs the `debug` playbook.
+> /!\ on local host and AWS, the above script runs the `debug` playbook.
 > It can be set off by running the `default` playbook again.
 
 ```
@@ -107,17 +108,84 @@ I.e. `./manage deploy aws cloud torrent`.
 If none are given, it will run all the available playbooks.
 
 
+## Post-installation
+
+Sadly, some services still require some post-installation steps, such as setting up credentials.
+
+
+### Cloud :: web
+
+The Web builder watches for modifications in the directory specified in the `web_files` variable.
+By default, this directory is `/srv/www` which is empty.
+In my case, I set this value to `/mnt/git/.website-clone` which is a clone of the eponym repository.
+
+Once I setup the whole project, I have to do the following steps:
+
+```sh
+cd /mnt/git
+git clone ./website ./.website-clone
+```
+
+
+### Cloud :: sync
+
+The Sync service, implemented by Syncthing, requires too some manual steps.
+First, forward the GUI port on the local machine:
+
+```sh
+ssh -NL 8384:localhost:8384 "$(yq -r '.main_user' "$CONF")@$(yq -r '.hostname' "$CONF")"
+```
+
+Now, visit `http://localhost:8384` and set everything up.
+This means:
+
+- (optional) setup GUI credentials
+- add other devices
+- configure synced folders
+
+> Note that the `/data` folder inside the container is a mount from `/mnt/data` on the host.
+> This means that the synced folders must be in this folder otherwise they will get destroyed if the container is removed.
+
+
+### Cloud :: files
+
+The same goes for the files browser.
+Visit `https://files.domain.tld` and login using `admin:admin`.
+
+Now go to the settings, change the default administrator password.
+Add another user, one can restrict its scope to restrict it to desired folders.
+It can be useful if multiple users are defined.
+
+
+### Cloud :: dav
+
+Same, but this time the administrator password has to be setup when visiting for the first time.
+Go to `https://dav.domain.tld`, and follow the wizard.
+Then navigate to the settings and add the desired user.
+
+
+### Cloud :: links
+
+Last one, visit `https://links.domain.tld`.
+The credentials are `linkding:<password>` with the password specified in the configuration file.
+
+Add another user, and let's go!
+
+
 ## Security
 
 
 ### Backups
 
-Backups are enabled on all the machines specified in the config.
-The server is configuried in the `backup_server` variable.
+Backups are enabled on all the servers specified in the configuration file.
+The server is configured in the `backup_server` variable.
 
 Then, on each client, Borgmatic is enabled to perform Borg backups everyday.
 
-On the backup server, the repositories are under the `backup` user home directory (`/home/backup`), each machine having its own sub-directory.
+On the backup server, the repositories are under the `backup` user home directory (`/home/backup`), each machine having its own restricted sub-directory.
+
+> The users `root` and `backup` have to be setup by hand.
+> This means, run `passwd <user>` and `passwd -u <user>` for both of them or SSH connection will fail.
 
 
 ### System
@@ -127,13 +195,14 @@ A [firewall](https://wiki.archlinux.org/title/Ufw) is deployed, it only accepts 
 - HTTP
 - HTTPS
 - SSH (restricted)
+- Syncthing: 22000 & 21027/udp
 
 Connections on port 80 are redirected to the SSL version using Let's Encrypt certificates.
 The other ports are blocked by the firewall and only accessible in the local network.
 
-The SSH configuration should be customized to only allow pubkey authentication.
+The SSH configuration should be customized to only allow public-key authentication.
 
-Add keys to the git user in `/home/git/.authorized_keys`, and create repositories using `git-shell` commands.
+Add keys to the git user in `/mnt/git/.authorized_keys`, and create repositories using `git-shell` commands.
 
 
 ### Apps
@@ -144,19 +213,21 @@ About passwords, please use long passwords with both letters, digits and special
 
 ## Bugs
 
-- `./conf/backup/config.yaml:19: - ssh://backup@backupserver/./{fqdn}`
 - `./playbooks/backup-client.yml:29: --encryption none`
 - `./playbooks/backup-server.yml:11: FIXME key_options`
-- `./utils/manage:14: # TODO how to parse jinja2 vars in a yml file?`
+- Handle `inventory_hostname` being an IP in production
+  - default playbook
+  - backup-server playbook
+
 
 
 ## TODO
 
 - [X] use Traefik instead of NPM
 - [X] real bkp module with borg on each machine
-- [X] add a links (bookmarks) manager
-- [ ] replace nextcloud
-- [ ] arrange hostnames management
+- [X] add a links (bookmarks manager)
+- [X] replace nextcloud, see baikal+filebrowser+syncthing
+- [ ] arrange hostnames management (TF with Gandi provider as we have IP/URL in config file?)
 - [ ] arrange the `conf` directory to not deploy/save it everywhere (split it in `conf`/`assets` dirs?)
 - [ ] setup Wireguard + PiHole
 - [ ] rename 'torrent' to 'media' and use the *arr stack instead

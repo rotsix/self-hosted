@@ -22,15 +22,10 @@ prod:
 
 ## cloud
 # web
-web_files: /tmp/www
+web_files: /srv/www
 
 # git
-git_repos: /home/git
 git_sitename: Git Sources
-
-# cloud
-cloud_db_password: nextcloud
-cloud_db_root_password: nextcloud
 
 # links
 links_password: linkding

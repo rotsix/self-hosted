@@ -2,8 +2,6 @@
   become: yes
   vars_files:
     - ../conf/config.yml
-  vars:
-    - healthcheck_postgres: pg_isready --dbname=nextcloud --host=localhost --port=5432 --username=nextcloud
 
   tasks:
 
@@ -16,7 +14,7 @@
         dest: /mnt/conf
         mode: preserve
       loop:
-        - ../conf/cloud/cloud
+        - ../conf/cloud/files
         - ../conf/cloud/web
 
     ############
@@ -29,7 +27,7 @@
         ssh_key_bits: 2048
         shell: /usr/bin/git-shell
         create_home: true
-        home: /home/git
+        home: /mnt/git
         skeleton: "false"
 
     - name: Disable 'git' password
@@ -38,7 +36,7 @@
     - name: Copy git shell commands
       ansible.builtin.copy:
         src: ../conf/cloud/git-shell-commands
-        dest: /home/git
+        dest: /mnt/git
         owner: git
         group: git
         mode: preserve
@@ -56,12 +54,11 @@
         rule: allow
         port: https
 
-    ###################
-    ### Docker networks
+    - name: "Configure firewall: allow syncthing (22000)"
+      community.general.ufw:
+        rule: allow
+        port: "22000"
 
-    - name: "Create Docker network: cloud (app+db+proxy)"
-      community.docker.docker_network:
-        name: cloud
 
     #######################
     ### Docker services ###
@@ -118,15 +115,15 @@
           KLAUS_USE_SMARTHTTP: "1"
           KLAUS_SITE_NAME: "{{ git_sitename }}"
         volumes:
-          - "{{ git_repos }}:/repos:ro"
+          - "/mnt/git:/repos:ro"
         labels:
           traefik.enable: "true"
           traefik.http.routers.git.rule: Host(`git.{{ hostname }}`)
 
-    ######
+    ############
     ## Bookmarks
 
-    - name: Start links store
+    - name: Start Links store
       community.docker.docker_container:
         image: sissbruecker/linkding
         name: links
@@ -146,83 +143,71 @@
           traefik.enable: "true"
           traefik.http.routers.links.rule: Host(`links.{{ hostname }}`)
 
+    ##################
+    ### DAV (Cal/Card)
 
-    #########
-    ### Cloud
-
-    - name: Start Cloud database
+    - name: Start (Cal/Card)DAV server
       community.docker.docker_container:
         state: started
-        name: cloud-db
-        image: postgres:alpine
-        restart_policy: unless-stopped
-        env:
-          POSTGRES_USER: nextcloud
-          POSTGRES_DATABASE: nextcloud
-          POSTGRES_PASSWORD: "{{ cloud_db_password | quote }}"
-          POSTGRES_ROOT_PASSWORD: "{{ cloud_db_root_password | quote }}"
-        volumes:
-          - /mnt/cloud-db:/var/lib/postgresql/data
-        healthcheck:
-          test: "{{ healthcheck_postgres }}"
-        networks:
-          - name: cloud
-
-    - name: Wait for the database to be ready
-      command: docker exec cloud-db {{ healthcheck_postgres }}
-      register: result
-      until: not result.rc
-      retries: 30
-      delay: 1
-
-    - name: Start Cloud app
-      community.docker.docker_container:
-        state: started
-        name: cloud-app
-        image: nextcloud:fpm-alpine
-        restart_policy: unless-stopped
-        env:
-          POSTGRES_HOST: cloud-db
-          POSTGRES_USER: nextcloud
-          POSTGRES_DATABASE: nextcloud
-          POSTGRES_PASSWORD: "{{ cloud_db_password | quote }}"
-        volumes:
-          - /mnt/cloud:/var/www/html
-        networks:
-          - name: cloud
-
-    - name: Install Cloud-app dependencies
-      ansible.builtin.package:
-        name:
-          - cronie
-        state: present
-
-    - name: Enable cron service
-      ansible.builtin.systemd:
-        name: cronie
-        state: started
-        enabled: yes
-
-    - name: Enable Cloud-app background jobs
-      ansible.builtin.cron:
-        name: "Enable NextCloud background jobs"
-        minute: "*/5"
-        job: "docker exec -u 82 cloud-app php -f /var/www/html/cron.php"
-
-    - name: Start Cloud proxy
-      community.docker.docker_container:
-        state: started
-        name: cloud-proxy
-        image: nginx:alpine
+        name: dav
+        image: ckulka/baikal:nginx
         restart_policy: unless-stopped
         exposed_ports:
           - "80"
         volumes:
-          - /mnt/conf/cloud/nginx.conf:/etc/nginx/nginx.conf:ro
-          - /mnt/cloud:/var/www/html:ro
-        networks:
-          - name: cloud
-          - name: bridge
+          - /mnt/dav/config:/var/www/baikal/config
+          - /mnt/dav/Specific:/var/www/baikal/Specific
         labels:
           traefik.enable: "true"
-          traefik.http.routers.cloud.rule: Host(`cloud.{{ hostname }}`)
+          traefik.http.routers.dav.rule: Host(`dav.{{ hostname }}`)
+
+    #########
+    ### Files
+
+    - name: Prepare Files database
+      ansible.builtin.shell: |
+        mkdir -p /mnt/files
+        touch /mnt/files/filebrowser.db
+
+    - name: Start Files WebUI
+      community.docker.docker_container:
+        state: started
+        name: files
+        image: filebrowser/filebrowser
+        restart_policy: unless-stopped
+        exposed_ports:
+          - "80"
+        volumes:
+          - /mnt/conf/files/config.json:/.filebrowser.json
+          - /mnt/data:/srv
+          - /mnt/files/filebrowser.db:/database.db
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.files.rule: Host(`files.{{ hostname }}`)
+
+    ########
+    ### Sync
+
+    - name: Setup Sync directory
+      ansible.builtin.file:
+        path: /mnt/data
+        owner: "{{ main_user }}"
+        group: "{{ main_user ]]"
+        state: directory
+        mode: '0755'
+
+    - name: Start Sync service
+      community.docker.docker_container:
+        state: started
+        name: sync
+        image: syncthing/syncthing
+        restart_policy: unless-stopped
+        exposed_ports:
+          - "22000"
+        published_ports:
+          - "127.0.0.1:8384:8384"
+        env:
+          TZ: Europe/Paris
+        volumes:
+          - /mnt/sync:/var/syncthing
+          - /mnt/data:/data
