@@ -211,6 +211,20 @@ The applications run in docker containers dispatched over related-only networks 
 About passwords, please use long passwords with both letters, digits and special characters.
 
 
+## Notes
+
+On Android, most of the pictures are stored in the following directories.
+It can be some folders to keep syncthing-ed.
+
+- /storage/emulated/0/DCIM
+- /storage/emulated/0/Pictures
+- /storage/emulated/0/Movies
+- /storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media
+- /storage/emulated/0/WhatsApp/Media
+
+They can be configured as *Send only*.
+
+
 ## Bugs
 
 - `./playbooks/backup-client.yml:29: --encryption none`
