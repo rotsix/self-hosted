@@ -36,7 +36,7 @@ deploy_aws () {
     hostname=$(yq -r '.hostname' "$CONF")
 
     ansible () {
-        ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -e "inventory_hostname=$hostname" -u arch -i "$ip," --key-file ~/aws.pem "$DIR/playbooks/$1".yml
+        ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -e "hostname=$hostname" -u arch -i "$ip," --key-file ~/aws.pem "$DIR/playbooks/$1".yml
     }
 
     if [ -n "$playbooks" ]; then

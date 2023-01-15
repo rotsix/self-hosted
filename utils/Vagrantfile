@@ -9,7 +9,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define :host do |host|
-    [80, 81, 443, 3000, 9091, 51413].each do |port|
+    [80, 443, 3000, 8080, 9091, 22000, 51413].each do |port|
       config.vm.network :forwarded_port, guest: port, host: port
     end
     #host.vm.network :private_network, ip: "192.168.42.69"
@@ -19,6 +19,8 @@ Vagrant.configure("2") do |config|
   ["default", "router", "cloud", "torrent", "debug"].each do |pb|
     config.vm.provision :ansible do |ansible|
       ansible.playbook = "../playbooks/" + pb + ".yml"
+      ansible.extra_vars = {hostname: "host"}
+      }
     end
   end
 end

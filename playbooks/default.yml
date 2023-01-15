@@ -31,7 +31,7 @@
 
     - name: Set hostname
       ansible.builtin.hostname:
-        name: "{{ inventory_hostname }}"
+        name: "{{ hostname }}"
 
     - name: Reboot
       ansible.builtin.reboot:
@@ -74,7 +74,7 @@
 
     - name: Deploy Borg on server
       ansible.builtin.include_tasks: backup-server.yml
-      when: inventory_hostname == backup_server
+      when: hostname == backup_server
 
     - name: Deploy Borg on client
       ansible.builtin.include_tasks: backup-client.yml

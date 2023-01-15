@@ -20,7 +20,7 @@
     dest: /root/.ssh/id_rsa
     mode: 0600
   with_fileglob:
-      - "../conf/backup/ssh/{{ inventory_hostname }}.privkey"
+      - "../conf/backup/ssh/{{ hostname }}.privkey"
 
 - name: Enable Borgmatic service
   ansible.builtin.systemd:

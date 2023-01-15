@@ -215,10 +215,6 @@ About passwords, please use long passwords with both letters, digits and special
 
 - `./playbooks/backup-client.yml:29: --encryption none`
 - `./playbooks/backup-server.yml:11: FIXME key_options`
-- Handle `inventory_hostname` being an IP in production
-  - default playbook
-  - backup-server playbook
-
 
 
 ## TODO
