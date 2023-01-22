@@ -192,7 +192,7 @@
       ansible.builtin.file:
         path: /mnt/data
         owner: "{{ main_user }}"
-        group: "{{ main_user ]]"
+        group: "{{ main_user }}"
         state: directory
         mode: '0755'
 
@@ -203,7 +203,8 @@
         image: syncthing/syncthing
         restart_policy: unless-stopped
         exposed_ports:
-          - "22000"
+          - "22000:22000/udp"
+          - "22000:22000/tcp"
         published_ports:
           - "127.0.0.1:8384:8384"
         env:
