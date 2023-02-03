@@ -3,6 +3,9 @@
   vars_files:
     - ../conf/config.yml
 
+  vars:
+    should_do_long_tasks: true
+
   tasks:
     - name: Refresh pacman keys
       ansible.builtin.shell: |
@@ -10,11 +13,13 @@
         pacman-key --init
         pacman-key --populate archlinux
         pacman -Sy --noconfirm archlinux-keyring && pacman -Su --noconfirm
+      when: should_do_long_tasks
 
     - name: Update system
       community.general.pacman:
         update_cache: yes
         upgrade: yes
+      when: should_do_long_tasks
 
     - name: Install dependencies
       ansible.builtin.package:
@@ -35,6 +40,7 @@
 
     - name: Reboot
       ansible.builtin.reboot:
+      when: should_do_long_tasks
 
     - name: Enable Docker service
       ansible.builtin.systemd:
@@ -47,6 +53,7 @@
         docker rm -f $(docker ps -a -q) || true
         docker image prune -f
         docker images | grep -v '^REPO' | sed 's/ \+/:/g' | cut -d: -f1,2 | xargs -L1 -r docker pull
+      when: should_do_long_tasks
 
     - name: Enable UFW service
       ansible.builtin.systemd:
