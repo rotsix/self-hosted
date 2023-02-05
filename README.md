@@ -243,4 +243,3 @@ They can be configured as *Send only*.
 - [ ] rename 'torrent' to 'media' and use the *arr stack instead
 - [ ] add the torrent sorting script (but as another module?)
 - [ ] Podman?
--
