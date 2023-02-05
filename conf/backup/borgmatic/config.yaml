@@ -173,7 +173,7 @@ storage:
     # Wait time between retries (in seconds) to allow transient
     # issues to pass. Increases after each retry as a form of
     # backoff. Defaults to 0 (no wait).
-    # retry_wait: 10
+    retry_wait: 60
 
     # Directory where temporary files are stored. Defaults to
     # $TMPDIR
