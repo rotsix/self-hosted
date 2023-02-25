@@ -20,6 +20,10 @@ prod:
   - url: localhost
     ip: 127.0.0.1
 
+## router
+# dns
+dns_password: pihole
+
 ## cloud
 # web
 web_files: /srv/www

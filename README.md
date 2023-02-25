@@ -20,6 +20,7 @@ The architecture consists yet of the following components:
 
 - Router module:
 	- Traefik as a reverse-proxy, it handles subdomains and routing to containers
+	- PiHole, the famous adblocker, is my DNS provider
 - Cloud module:
 	- personal homepage, managed by a Jekyll container (`domain.tld`)
 	- git viewer, Klaus (`git.domain.tld`)
@@ -119,11 +120,20 @@ The Web builder watches for modifications in the directory specified in the `web
 By default, this directory is `/srv/www` which is empty.
 In my case, I set this value to `/mnt/git/.website-clone` which is a clone of the eponym repository.
 
-Once I setup the whole project, I have to do the following steps:
+Once I setup the whole project, I have to do the following steps.
+It basicallly clones the website repository (so it's not a bare one) and add a hook on the original to pull the sources when something happens.
+Remember, the clone holds the sources that the Jekyll container takes as input.
 
 ```sh
-cd /mnt/git
-git clone ./website ./.website-clone
+git clone /mnt/git/website /mnt/git/.website-clone
+
+cat <<EOF > /mnt/git/website/hooks/post-receive
+#!/bin/bash
+
+WEB_DIR=/mnt/git/.website-clone
+
+git --work-tree=$WEB_DIR --git-dir=$WEB_DIR/.git pull
+EOF
 ```
 
 
@@ -220,7 +230,6 @@ It can be some folders to keep syncthing-ed.
 - /storage/emulated/0/Pictures
 - /storage/emulated/0/Movies
 - /storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media
-- /storage/emulated/0/WhatsApp/Media
 
 They can be configured as *Send only*.
 
@@ -237,9 +246,19 @@ They can be configured as *Send only*.
 - [X] real bkp module with borg on each machine
 - [X] add a links (bookmarks manager)
 - [X] replace nextcloud, see baikal+filebrowser+syncthing
+- [X] setup PiHole
 - [ ] arrange hostnames management (TF with Gandi provider as we have IP/URL in config file?)
 - [ ] arrange the `conf` directory to not deploy/save it everywhere (split it in `conf`/`assets` dirs?)
-- [ ] setup Wireguard + PiHole
+- [ ] setup Wireguard
 - [ ] rename 'torrent' to 'media' and use the *arr stack instead
+	- Flemmarr: config management
+	- bazarr: subtitles
+	- sonarr: series
+	- radarr: movies
+	- lidarr: music
+	- readarr: ebooks
+	- prowler: indexer
+	- mylar3: comics
+	- transmission: torrents
 - [ ] add the torrent sorting script (but as another module?)
 - [ ] Podman?

@@ -48,3 +48,27 @@
           - "80:80"
           - "443:443"
           - "127.0.0.1:8080:8080"
+
+    - name: Start DNS provider
+      community.docker.docker_container:
+        name: dns
+        image: pihole/pihole:latest
+        restart_policy: unless-stopped
+        env:
+          TZ: Europe/Paris
+          WEBPASSWORD: "{{ dns_password }}"
+          DNSMASQ_LISTENING: all
+        ports:
+          - "53:53/tcp"
+          - "53:53/udp"
+          - "127.0.0.1:8081:80/tcp"
+        volumes:
+          - /mnt/dns/etc-pihole:/etc/pihole
+          - /mnt/dns/etc-dnsmasq.d:/etc/dnsmasq.d
+        labels:
+          traefik.enable: "false"
+          # For later, when the VPN will get deployed
+          # traefik.http.routers.dns.tls: "false"
+          # traefik.http.routers.dns.rule: Host(`dns.{{ hostname }}`) && PathPrefix(`/admin`)
+          # traefik.http.routers.dns.service: api@internal
+          # traefik.http.routers.dns.middlewares: local-network@docker
