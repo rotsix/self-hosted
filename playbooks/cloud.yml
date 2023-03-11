@@ -133,6 +133,9 @@
         restart_policy: unless-stopped
         exposed_ports:
           - "80"
+        # https://github.com/sissbruecker/linkding/issues/439
+        ulimits:
+          - nofile=1048576:1048576
         env:
           LD_SUPERUSER_NAME: linkding
           LD_SUPERUSER_PASSWORD: "{{ links_password }}"
