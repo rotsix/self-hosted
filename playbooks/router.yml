@@ -6,7 +6,6 @@
   tasks:
     - name: Start reverse-proxy
       community.docker.docker_container:
-        state: started
         name: reverseproxy
         image: traefik
         restart_policy: unless-stopped

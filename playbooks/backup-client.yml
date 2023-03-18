@@ -25,7 +25,6 @@
 - name: Enable Borgmatic service
   ansible.builtin.systemd:
     name: borgmatic.timer
-    state: started
     enabled: yes
 
 - name: Init Borg repository

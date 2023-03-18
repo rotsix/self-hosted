@@ -45,7 +45,6 @@
     - name: Enable Docker service
       ansible.builtin.systemd:
         name: docker
-        state: started
         enabled: yes
 
     - name: Update current Docker images
@@ -58,7 +57,6 @@
     - name: Enable UFW service
       ansible.builtin.systemd:
         name: ufw
-        state: started
         enabled: yes
 
     - name: "Configure firewall: default deny"

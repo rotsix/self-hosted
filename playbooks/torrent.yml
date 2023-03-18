@@ -16,7 +16,6 @@
 
     - name: Start Transmission
       community.docker.docker_container:
-        state: started
         name: transmission
         image: linuxserver/transmission
         restart_policy: unless-stopped
@@ -40,7 +39,6 @@
 
     - name: Start mStream
       community.docker.docker_container:
-        state: started
         name: mstream
         image: linuxserver/mstream
         restart_policy: unless-stopped

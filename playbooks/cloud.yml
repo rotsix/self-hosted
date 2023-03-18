@@ -70,7 +70,6 @@
 
     - name: Start Web builder
       community.docker.docker_container:
-        state: started
         name: web-builder
         image: jekyll/jekyll
         restart_policy: unless-stopped
@@ -84,7 +83,6 @@
 
     - name: Start Web proxy
       community.docker.docker_container:
-        state: started
         name: web-proxy
         image: nginx:alpine
         restart_policy: unless-stopped
@@ -102,7 +100,6 @@
 
     - name: Start Git WebUI
       community.docker.docker_container:
-        state: started
         name: git
         image: jonashaag/klaus
         restart_policy: unless-stopped
@@ -129,7 +126,6 @@
       community.docker.docker_container:
         image: sissbruecker/linkding
         name: links
-        state: started
         restart_policy: unless-stopped
         exposed_ports:
           - "80"
@@ -153,7 +149,6 @@
 
     - name: Start (Cal/Card)DAV server
       community.docker.docker_container:
-        state: started
         name: dav
         image: ckulka/baikal:nginx
         restart_policy: unless-stopped
@@ -176,7 +171,6 @@
 
     - name: Start Files WebUI
       community.docker.docker_container:
-        state: started
         name: files
         image: filebrowser/filebrowser
         restart_policy: unless-stopped
@@ -203,7 +197,6 @@
 
     - name: Start Sync service
       community.docker.docker_container:
-        state: started
         name: sync
         image: syncthing/syncthing
         restart_policy: unless-stopped
