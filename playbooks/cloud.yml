@@ -29,10 +29,8 @@
         create_home: true
         home: /mnt/git
         skeleton: "false"
+        password: "!"
       register: git_user
-
-    - name: Disable 'git' password
-      ansible.builtin.command: passwd -d git
 
     - name: Copy git shell commands
       ansible.builtin.copy:
