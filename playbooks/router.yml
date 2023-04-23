@@ -9,9 +9,12 @@
         name: reverseproxy
         image: traefik
         restart_policy: unless-stopped
+        healthcheck:
+          test: traefik healthcheck --ping
         command:
           - --log.level=INFO
           - --api.dashboard=true
+          - --ping=true
           # API is on port 8080 which is only available on localhost
           - --api.insecure=true
           - --providers.docker=true

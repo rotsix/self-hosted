@@ -86,6 +86,8 @@
         name: web-proxy
         image: nginx:alpine
         restart_policy: unless-stopped
+        healthcheck:
+          test: curl -fsSL localhost > /dev/null
         exposed_ports:
           - "80"
         volumes:
@@ -131,7 +133,7 @@
           - "80"
         # https://github.com/sissbruecker/linkding/issues/439
         ulimits:
-          - nofile=1048576:1048576
+          - nofile:1048576:1048576
         env:
           LD_SUPERUSER_NAME: linkding
           LD_SUPERUSER_PASSWORD: "{{ links_password }}"
@@ -152,6 +154,8 @@
         name: dav
         image: ckulka/baikal:nginx
         restart_policy: unless-stopped
+        healthcheck:
+          test: curl -fsSL localhost | grep -q '<h1>Baïkal is running alright.</h1>'
         exposed_ports:
           - "80"
         volumes:
