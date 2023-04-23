@@ -50,8 +50,8 @@
     - name: Update current Docker images
       ansible.builtin.shell: |
         docker rm -f $(docker ps -a -q) || true
-        docker image prune -f
         docker images | grep -v '^REPO' | sed 's/ \+/:/g' | cut -d: -f1,2 | xargs -L1 -r docker pull
+        docker image prune -f
       when: should_do_long_tasks
 
     - name: Enable UFW service
