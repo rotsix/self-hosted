@@ -205,10 +205,14 @@
         exposed_ports:
           - "22000:22000/udp"
           - "22000:22000/tcp"
-        published_ports:
-          - "127.0.0.1:8384:8384"
+          - "8384"
         env:
           TZ: Europe/Paris
         volumes:
           - /mnt/sync:/var/syncthing
           - /mnt/data:/data
+        labels:
+          traefik.enable: "true"
+          traefik.http.services.sync.loadbalancer.server.port: "8384"
+          traefik.http.routers.sync.rule: Host(`sync.{{ hostname }}`)
+          traefik.http.routers.sync.middlewares: local-network@docker

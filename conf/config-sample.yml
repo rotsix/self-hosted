@@ -24,6 +24,9 @@ prod:
 # dns
 dns_password: pihole
 
+# vpn
+vpn_password: wireguard
+
 ## cloud
 # web
 web_files: /srv/www

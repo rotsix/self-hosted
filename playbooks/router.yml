@@ -36,20 +36,31 @@
           - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
 
         labels:
-          traefik.enable: "false"
-          # For later, when the VPN will get deployed
-          # traefik.http.routers.reverseproxy.tls: "false"
-          # traefik.http.routers.reverseproxy.rule: Host(`traefik.{{ hostname }}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
-          # traefik.http.routers.reverseproxy.service: api@internal
-          # traefik.http.routers.reverseproxy.middlewares: local-network@docker
+          traefik.enable: "true"
+          traefik.http.routers.reverseproxy.rule: Host(`traefik.{{ hostname }}`)
+          traefik.http.services.reverseproxy.loadbalancer.server.port: "8080"
+          traefik.http.routers.reverseproxy.middlewares: local-network@docker
           traefik.http.middlewares.local-network.ipwhitelist.sourcerange: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock:ro
-        published_ports:
+        ports:
           - "80:80"
           - "443:443"
-          - "127.0.0.1:8080:8080"
+        exposed_ports:
+          - "8080"
+
+
+    - name: "Configure firewall: allow HTTP"
+      community.general.ufw:
+        rule: allow
+        port: http
+
+    - name: "Configure firewall: allow HTTPS"
+      community.general.ufw:
+        rule: allow
+        port: https
+
 
     - name: Start DNS provider
       community.docker.docker_container:
@@ -63,14 +74,69 @@
         ports:
           - "53:53/tcp"
           - "53:53/udp"
-          - "127.0.0.1:8081:80/tcp"
+        exposed_ports:
+          - "80"
         volumes:
           - /mnt/dns/etc-pihole:/etc/pihole
           - /mnt/dns/etc-dnsmasq.d:/etc/dnsmasq.d
         labels:
-          traefik.enable: "false"
-          # For later, when the VPN will get deployed
-          # traefik.http.routers.dns.tls: "false"
-          # traefik.http.routers.dns.rule: Host(`dns.{{ hostname }}`) && PathPrefix(`/admin`)
-          # traefik.http.routers.dns.service: api@internal
-          # traefik.http.routers.dns.middlewares: local-network@docker
+          traefik.enable: "true"
+          traefik.http.services.dns.loadbalancer.server.port: "80"
+          traefik.http.routers.dns.rule: Host(`dns.{{ hostname }}`)
+          traefik.http.routers.dns.middlewares: local-network@docker, dns-redirect-admin@docker
+          traefik.http.middlewares.dns-redirect-admin.redirectregex.regex: ^https://dns.{{ hostname }}/$
+          traefik.http.middlewares.dns-redirect-admin.redirectregex.replacement: https://dns.{{ hostname }}/admin
+
+
+    - name: "Configure firewall: allow DNS"
+      community.general.ufw:
+        rule: allow
+        port: "53"
+
+
+    - name: Start VPN
+      community.docker.docker_container:
+        name: vpn
+        image: weejewel/wg-easy
+        restart_policy: unless-stopped
+        healthcheck:
+          test: wget -qO- localhost:51821 | grep -q '<title>WireGuard</title>'
+        env:
+          WG_HOST: "vpn.{{ hostname }}"
+          PASSWORD: "{{ vpn_password }}"
+          WG_PERSISTENT_KEEPALIVE: "10"
+          WG_DEFAULT_ADDRESS: 10.0.0.x
+          # FIXME: how to use the PiHole IP?
+          # Setting this as the inventory_hostname (ie public IP) causes timeouts
+          # WG_DEFAULT_DNS: "{{ inventory_hostname }}"
+        ports:
+          - "51820:51820/udp"
+        exposed_ports:
+          - "51821"
+        volumes:
+          - /mnt/vpn:/etc/wireguard
+        capabilities:
+          - NET_ADMIN
+          - SYS_MODULE
+        sysctls:
+          net.ipv4.conf.all.src_valid_mark: "1"
+          net.ipv4.ip_forward: "1"
+        labels:
+          traefik.enable: "true"
+          traefik.http.services.vpn.loadbalancer.server.port: "51821"
+          traefik.http.routers.vpn.rule: Host(`vpn.{{ hostname }}`)
+          traefik.http.routers.vpn.rule: Host(`vpn.{{ hostname }}`)
+          traefik.http.routers.vpn.middlewares: local-network@docker
+
+
+    - name: "Configure firewall: allow Wireguard"
+      community.general.ufw:
+        rule: allow
+        port: "51820"
+        proto: udp
+
+    - name: "Configure firewall: allow Wireguard"
+      community.general.ufw:
+        rule: allow
+        port: "51821"
+        proto: tcp
