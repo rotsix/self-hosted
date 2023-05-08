@@ -1,0 +1,20 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - ../conf/config.yml
+
+  tasks:
+    - name: Start status page
+      community.docker.docker_container:
+        name: status
+        image: louislam/uptime-kuma
+        restart_policy: unless-stopped
+        exposed_ports:
+          - "3001"
+        volumes:
+          - /mnt/status:/app/data
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.monitoring.rule: Host(`status.{{ hostname }}`)
+          traefik.http.services.monitoring.loadbalancer.server.port: "3001"
