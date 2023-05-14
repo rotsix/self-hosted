@@ -20,6 +20,30 @@
           - name: public
 
 
+    ############
+    ### Homepage
+
+    - name: Copy config files
+      ansible.builtin.copy:
+        src: ../conf/home
+        dest: /mnt/conf
+        mode: preserve
+
+    - name: Start home page
+      community.docker.docker_container:
+        name: home
+        image: b4bz/homer:latest
+        restart_policy: unless-stopped
+        env:
+          PORT: "80"
+          INIT_ASSETS: "0"
+        volumes:
+          - /mnt/conf/home:/www/assets:ro
+        networks:
+          - name: private
+            ipv4_address: 172.20.0.5
+
+
     #######
     ### DNS
 
