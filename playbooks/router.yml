@@ -4,63 +4,24 @@
     - ../conf/config.yml
 
   tasks:
-    - name: Start reverse-proxy
+
+    - name: Start Cloudflare tunnel
       community.docker.docker_container:
-        name: reverseproxy
-        image: traefik
+        name: tunnel
+        image: cloudflare/cloudflared
         restart_policy: unless-stopped
-        healthcheck:
-          test: traefik healthcheck --ping
+        # healthcheck:
+          # test: <test>
         command:
-          - --log.level=INFO
-          - --api.dashboard=true
-          - --ping=true
-          # API is on port 8080 which is only available on localhost
-          - --api.insecure=true
-          - --providers.docker=true
-          - --providers.docker.exposedbydefault=false
-          - --providers.providersthrottleduration=10s
-
-          - --entrypoints.web.address=:80
-          - --entrypoints.websecure.address=:443
-          - --entrypoints.web.http.redirections.entrypoint.to=websecure
-          - --entrypoints.web.http.redirections.entryPoint.scheme=https
-          - --entrypoints.websecure.http.tls=true
-          - --entrypoints.websecure.http.tls.certResolver=myresolver
-
-          - --certificatesresolvers.myresolver.acme.email={{ main_user }}@{{ hostname }}
-          ### DEBUG
-          # - --certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
-          - --certificatesresolvers.myresolver.acme.tlschallenge=true
-          - --certificatesresolvers.myresolver.acme.httpchallenge=true
-          - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
-
-        labels:
-          traefik.enable: "true"
-          traefik.http.routers.reverseproxy.rule: Host(`traefik.{{ hostname }}`)
-          traefik.http.services.reverseproxy.loadbalancer.server.port: "8080"
-          traefik.http.routers.reverseproxy.middlewares: local-network@docker
-          traefik.http.middlewares.local-network.ipwhitelist.sourcerange: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock:ro
-        ports:
-          - "80:80"
-          - "443:443"
-        exposed_ports:
-          - "8080"
+          - tunnel
+          - run
+          - --token={{ cloudflare_token }}
+        networks:
+          - name: public
 
 
-    - name: "Configure firewall: allow HTTP"
-      community.general.ufw:
-        rule: allow
-        port: http
-
-    - name: "Configure firewall: allow HTTPS"
-      community.general.ufw:
-        rule: allow
-        port: https
-
+    #######
+    ### DNS
 
     - name: Start DNS provider
       community.docker.docker_container:
@@ -74,25 +35,21 @@
         ports:
           - "53:53/tcp"
           - "53:53/udp"
-        exposed_ports:
-          - "80"
         volumes:
           - /mnt/dns/etc-pihole:/etc/pihole
           - /mnt/dns/etc-dnsmasq.d:/etc/dnsmasq.d
-        labels:
-          traefik.enable: "true"
-          traefik.http.services.dns.loadbalancer.server.port: "80"
-          traefik.http.routers.dns.rule: Host(`dns.{{ hostname }}`)
-          traefik.http.routers.dns.middlewares: local-network@docker, dns-redirect-admin@docker
-          traefik.http.middlewares.dns-redirect-admin.redirectregex.regex: ^https://dns.{{ hostname }}/$
-          traefik.http.middlewares.dns-redirect-admin.redirectregex.replacement: https://dns.{{ hostname }}/admin
-
+        networks:
+          - name: private
+            ipv4_address: 172.20.0.2
 
     - name: "Configure firewall: allow DNS"
       community.general.ufw:
         rule: allow
-        port: "53"
+        app: dns
 
+
+    #######
+    ### VPN
 
     - name: Start VPN
       community.docker.docker_container:
@@ -106,13 +63,11 @@
           PASSWORD: "{{ vpn_password }}"
           WG_PERSISTENT_KEEPALIVE: "10"
           WG_DEFAULT_ADDRESS: 10.0.0.x
-          # FIXME: how to use the PiHole IP?
           # Setting this as the inventory_hostname (ie public IP) causes timeouts
           # WG_DEFAULT_DNS: "{{ inventory_hostname }}"
+          WG_DEFAULT_DNS: 172.20.0.2  # DNS private IP
         ports:
           - "51820:51820/udp"
-        exposed_ports:
-          - "51821"
         volumes:
           - /mnt/vpn:/etc/wireguard
         capabilities:
@@ -121,22 +76,13 @@
         sysctls:
           net.ipv4.conf.all.src_valid_mark: "1"
           net.ipv4.ip_forward: "1"
-        labels:
-          traefik.enable: "true"
-          traefik.http.services.vpn.loadbalancer.server.port: "51821"
-          traefik.http.routers.vpn.rule: Host(`vpn.{{ hostname }}`)
-          traefik.http.routers.vpn.rule: Host(`vpn.{{ hostname }}`)
-          traefik.http.routers.vpn.middlewares: local-network@docker
-
+        networks:
+          - name: public
+          - name: private
+            ipv4_address: 172.20.0.3
 
     - name: "Configure firewall: allow Wireguard"
       community.general.ufw:
         rule: allow
         port: "51820"
         proto: udp
-
-    - name: "Configure firewall: allow Wireguard"
-      community.general.ufw:
-        rule: allow
-        port: "51821"
-        proto: tcp

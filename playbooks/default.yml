@@ -83,3 +83,14 @@
 
     - name: Deploy Borg on client
       ansible.builtin.include_tasks: backup-client.yml
+
+    - name: "Create Docker network: public"
+      community.docker.docker_network:
+        name: public
+
+    - name: "Create Docker network: private"
+      community.docker.docker_network:
+        name: private
+        ipam_config:
+          - subnet: 172.20.0.0/16
+            gateway: 172.20.0.1
